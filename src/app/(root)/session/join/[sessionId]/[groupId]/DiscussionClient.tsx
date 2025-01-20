@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import ChatWindow from '@/components/Discussion/session/ChatWindow'
 import DiscussionGuide from '@/components/Discussion/session/DiscussionGuide'
 import { getSessionById } from '@/lib/actions/session'
+import { analyzeTranscript } from '@/lib/actions/transcript'
 import { Session, DiscussionClientProps } from '@/types'
 
 function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
@@ -42,6 +43,31 @@ function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
         fetchSession()
     }, [sessionId])
 
+    // Transcript analysis interval using server action
+    useEffect(() => {
+        if (!session?.id || !groupId) return
+
+        const runAnalysis = async () => {
+            try {
+                const result = await analyzeTranscript(groupId, session.id)
+                console.log('Transcript analysis result:', result)
+                if (!result.success) {
+                    console.log('Transcript analysis failed:', result.error)
+                }
+            } catch (error) {
+                console.log('Error running transcript analysis:', error)
+            }
+        }
+
+        // Run initial analysis
+        runAnalysis()
+
+        // Set up interval (every 2 minutes)
+        const intervalId = setInterval(runAnalysis, 1 * 10 * 1000)
+
+        return () => clearInterval(intervalId)
+    }, [session?.id, groupId])
+
     if (loading) {
         return (
             <div className="h-screen w-full flex items-center justify-center">
@@ -58,19 +84,12 @@ function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
         )
     }
 
-    if (!session) {
-        return (
-            <div className="h-screen w-full flex flex-col items-center justify-center">
-                <div className="text-gray-500 text-xl mb-4">Session not found</div>
-            </div>
-        )
-    }
-
     return (
         <div className="flex h-screen">
             <div className="flex-1 p-4 overflow-hidden">
                 <DiscussionGuide 
                     session={session} 
+                    mode="discussion" 
                     groupId={groupId}
                 />
             </div>

@@ -54,11 +54,12 @@ export default function CreateSessionPage() {
     try {
       const { session, error } = await createSession({
         title,
-        status: false,
+        status: 'active',
         task,
         scenario,
         discussion_points: validDiscussionPoints,
-        time_left: timeLeftInSeconds
+        time_left: timeLeftInSeconds,
+        current_point: 0
       })
   
       if (error) {

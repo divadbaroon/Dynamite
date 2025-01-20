@@ -16,7 +16,7 @@ export async function createSession(data: Omit<Session, 'id' | 'created_at' | 'a
     const { data: newSession, error } = await supabase
       .from('sessions')
       .insert([{
-        status: false, 
+        status: 'active', 
         title: data.title,
         task: data.task,
         scenario: data.scenario,
@@ -24,7 +24,8 @@ export async function createSession(data: Omit<Session, 'id' | 'created_at' | 'a
         author: user.id,
         participant_count: 0,
         group_count: 0,
-        time_left: data.time_left
+        time_left: data.time_left,
+        current_point: 0
       }])
       .select()
       .single()

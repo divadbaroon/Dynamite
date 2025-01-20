@@ -3,7 +3,7 @@
 export type Session = {
     id: string
     created_at: string
-    status: boolean
+    status: 'pending' | 'active' | 'completed' 
     title: string
     task: string | null
     scenario: string | null
@@ -12,6 +12,7 @@ export type Session = {
     time_left: integer
     participant_count?: number
     group_count?: number
+    current_point?: number
   }
 
 export interface SessionProps {

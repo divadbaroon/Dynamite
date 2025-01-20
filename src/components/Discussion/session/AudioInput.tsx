@@ -27,9 +27,10 @@ const AudioInput: React.FC<AudioInputProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [microphone, setMicrophone] = useState<MediaRecorder | null>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const audioChunksRef = useRef<Blob[]>([]);
   const keepAliveInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const { 
     connection, 
     connectToDeepgram, 
@@ -38,26 +39,118 @@ const AudioInput: React.FC<AudioInputProps> = ({
     deepgramKey 
   } = useDeepgram();
 
-  const setupMicrophone = async () => {
-    const userMedia = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        noiseSuppression: true,
-        echoCancellation: true,
+  const checkPermissions = async () => {
+    try {
+      // First check if permissions are already granted
+      const permissions = await navigator.mediaDevices.enumerateDevices();
+      const audioPermission = permissions.some(device => device.kind === 'audioinput' && device.label !== '');
+      
+      if (audioPermission) {
+        setHasPermission(true);
+        return true;
       }
-    });
-    setMediaStream(userMedia);
-    const mic = new MediaRecorder(userMedia, {
-      mimeType: 'audio/webm'
-    });
-    
-    mic.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        audioChunksRef.current.push(e.data);
+
+      // If not already granted, request permissions
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+      setHasPermission(true);
+      return true;
+    } catch (error) {
+      console.log('Error checking permissions:', error);
+      setHasPermission(false);
+      return false;
+    }
+  };
+
+  const setupMicrophone = async () => {
+    try {
+      if (!hasPermission) {
+        const permitted = await checkPermissions();
+        if (!permitted) {
+          throw new Error('Microphone permission denied');
+        }
+      }
+
+      const userMedia = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          noiseSuppression: true,
+          echoCancellation: true,
+        }
+      });
+      
+      setMediaStream(userMedia);
+      
+      const mic = new MediaRecorder(userMedia, {
+        mimeType: 'audio/webm'
+      });
+      
+      mic.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+      
+      setMicrophone(mic);
+      return mic;
+    } catch (error) {
+      console.log('Error setting up microphone:', error);
+      throw error;
+    }
+  };
+
+  // Initialize permissions and setup on mount
+  // Split initialization into two phases
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  
+  // Phase 1: Get permissions as soon as component mounts
+  useEffect(() => {
+    const getInitialPermissions = async () => {
+      if (!disabled && !permissionGranted) {
+        try {
+          const permitted = await checkPermissions();
+          setPermissionGranted(permitted);
+        } catch (error) {
+          console.log('Error getting initial permissions:', error);
+        }
       }
     };
-    
-    setMicrophone(mic);
-  };
+
+    getInitialPermissions();
+  }, [disabled]);
+
+  // Phase 2: Setup microphone and connect to Deepgram once we have permissions and Deepgram is ready
+  useEffect(() => {
+    const initialize = async () => {
+      console.log('Initialize called with states:', {
+        disabled,
+        isInitialized,
+        permissionGranted,
+        hasDeepgramKey: !!deepgramKey,
+        connectionState
+      });
+      
+      if (!disabled && !isInitialized && permissionGranted && deepgramKey && connectionState === SOCKET_STATES.closed) {
+        try {
+          const mic = await setupMicrophone();
+          if (mic) {
+            await connectToDeepgram({
+              model: 'nova-2',
+              interim_results: true,
+              smart_format: true,
+              filler_words: true,
+              utterance_end_ms: 3000,
+            });
+            setIsInitialized(true);
+          }
+        } catch (error) {
+          console.log('Error in initialization:', error);
+          cleanup();
+        }
+      }
+    };
+
+    initialize();
+  }, [disabled, deepgramKey, isInitialized, permissionGranted, connectionState]);
 
   useEffect(() => {
     if (!microphone || !connection) return;
@@ -78,7 +171,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
         try {
           await onMessageSubmit(transcript);
     
-          // Upload audio to Supabase
           try {
             console.log('Audio chunks available:', audioChunksRef.current.length);
             
@@ -111,7 +203,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
             console.log('Message updated with audio URLs');
           } catch (error) {
             console.log('Error processing and uploading audio:', error);
-            // Log more details about the error
             if (error instanceof Error) {
               console.log('Error details:', error.message);
               console.log('Error stack:', error.stack);
@@ -119,7 +210,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
           }
         } finally {
           setIsProcessing(false);
-          // Clear the chunks after successful processing or in case of error
           audioChunksRef.current = [];
         }
       }
@@ -141,7 +231,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
 
   useEffect(() => {
     if (!connection) return;
-
     if (microphone?.state === 'recording' && connectionState === SOCKET_STATES.open) {
       connection.keepAlive();
       keepAliveInterval.current = setInterval(() => {
@@ -152,7 +241,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
         clearInterval(keepAliveInterval.current);
       }
     }
-
     return () => {
       if (keepAliveInterval.current) {
         clearInterval(keepAliveInterval.current);
@@ -165,20 +253,17 @@ const AudioInput: React.FC<AudioInputProps> = ({
       const timestamp = new Date().toISOString();
       const filename = `recordings/${sessionId}/${userId}_${timestamp}${isPitched ? '_pitched' : ''}.webm`;
       const supabase = await createClient();
-
       const { data, error } = await supabase.storage
         .from('audio-recordings')
         .upload(filename, audioBlob, {
           contentType: 'audio/webm',
           cacheControl: '3600'
         });
-
       if (error) throw error;
       
       const { data: { publicUrl } } = supabase.storage
         .from('audio-recordings')
         .getPublicUrl(filename);
-
       return publicUrl;
     } catch (error) {
       console.log('Error uploading audio:', error);
@@ -196,7 +281,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
       audioBuffer.length,
       audioBuffer.sampleRate
     );
-
     const source = offlineContext.createBufferSource();
     source.buffer = audioBuffer;
     source.playbackRate.value = pitchFactor;
@@ -214,18 +298,15 @@ const AudioInput: React.FC<AudioInputProps> = ({
     return new Promise((resolve) => {
       const processedRecorder = new MediaRecorder(mediaDest.stream);
       const processedChunks: Blob[] = [];
-
       processedRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           processedChunks.push(e.data);
         }
       };
-
       processedRecorder.onstop = () => {
         const processedBlob = new Blob(processedChunks, { type: 'audio/webm' });
         resolve(processedBlob);
       };
-
       processedRecorder.start();
       setTimeout(() => processedRecorder.stop(), renderedBuffer.duration * 1000 + 100);
     });
@@ -233,11 +314,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
 
   const handleMicClick = async () => {
     if (disabled) return;
-
-    if (!deepgramKey) {
-      console.log('Deepgram API key is not set');
-      return;
-    }
     
     try {
       if (connectionState === SOCKET_STATES.open) {
@@ -246,6 +322,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
         mediaStream?.getTracks().forEach(track => track.stop());
         setMediaStream(null);
         setMicrophone(null);
+        setIsInitialized(false);
       } else {
         await setupMicrophone();
         await connectToDeepgram({
@@ -255,6 +332,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
           filler_words: true,
           utterance_end_ms: 3000,
         });
+        setIsInitialized(true);
       }
     } catch (error) {
       console.log('Error in handleMicClick:', error);
@@ -272,6 +350,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
     }
     setMediaStream(null);
     setMicrophone(null);
+    setIsInitialized(false);
     audioChunksRef.current = [];
     if (keepAliveInterval.current) {
       clearInterval(keepAliveInterval.current);
