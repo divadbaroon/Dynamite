@@ -51,7 +51,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   const [editedContent, setEditedContent] = useState("");
 
   const [currentPointIndex, setCurrentPointIndex] = useState(0);
-  const [pointTimeLeft, setPointTimeLeft] = useState(10); // 3 minutes in seconds
+  const [pointTimeLeft, setPointTimeLeft] = useState(180); // 3 minutes in seconds
   const [openItem, setOpenItem] = useState<string | undefined>(`item-${currentPointIndex}`);
 
   const supabase = createClient();
