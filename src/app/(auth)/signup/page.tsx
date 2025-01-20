@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { signup, login } from "../(auth)/login/actions";
+import { signup, login } from "../../(auth)/login/actions";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
