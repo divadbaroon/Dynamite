@@ -53,6 +53,11 @@ const NavLink = ({ href, children, className }: NavLinkProps) => {
 };
 
 const Navbar = ({ user }: NavbarProps) => {
+  const pathname = usePathname(); // Get the current path
+
+  // Check if "/session/join" is in the URL
+  const isSessionJoin = pathname.includes("/session/join");
+
   return (
     <Card className="sticky top-0 z-50 w-full bg-card py-3 px-4 border-0 border-b border-gray-200 flex items-center justify-between gap-6 rounded-2xl mt-5">
       <div className="flex items-center gap-4">
@@ -64,15 +69,17 @@ const Navbar = ({ user }: NavbarProps) => {
         </Link>
       </div>
 
-      <nav className="hidden md:block">
-        <ul className="flex items-center gap-8">
-          {NAV_ITEMS.map(({ label, href }) => (
-            <li key={href}>
-              <NavLink href={href}>{label}</NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      {!isSessionJoin && ( // Conditionally render the navigation menu
+        <nav className="hidden md:block">
+          <ul className="flex items-center gap-8">
+            {NAV_ITEMS.map(({ label, href }) => (
+              <li key={href}>
+                <NavLink href={href}>{label}</NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
       <div className="flex items-center gap-4">
         {user ? (
@@ -128,11 +135,12 @@ const Navbar = ({ user }: NavbarProps) => {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-48">
-              {NAV_ITEMS.map(({ label, href }) => (
-                <DropdownMenuItem key={href} asChild>
-                  <Link href={href}>{label}</Link>
-                </DropdownMenuItem>
-              ))}
+              {!isSessionJoin &&
+                NAV_ITEMS.map(({ label, href }) => (
+                  <DropdownMenuItem key={href} asChild>
+                    <Link href={href}>{label}</Link>
+                  </DropdownMenuItem>
+                ))}
               {!user && (
                 <>
                   <DropdownMenuItem asChild>
