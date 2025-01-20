@@ -91,7 +91,7 @@ const Navbar = ({ user }: NavbarProps) => {
               <DropdownMenuItem className="flex items-center gap-2">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.email}</p>
-                  <p className="text-xs text-muted-foreground">User Account</p>
+                  <p className="text-xs text-muted-foreground">Guest Account</p>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem>

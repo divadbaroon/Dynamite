@@ -42,6 +42,7 @@ function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
   if (!deepgramKey) {
     console.error('Deepgram API key is not set in environment variables');
   }
+  const [userData, setUserData] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
@@ -78,8 +79,9 @@ function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
       if (!user) return
       
       try {
-        const userData = await getUserById(user.id)
-        setHasConsented(userData?.consent_status ?? false)
+        const data = await getUserById(user.id)
+        setUserData(data)  // Store the full user data
+        setHasConsented(data?.consent_status ?? false)
       } catch (error) {
         console.error('Error fetching user consent:', error)
         setHasConsented(false)
@@ -154,15 +156,16 @@ function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
   }
 
   const handleSendMessage = async (messageContent: string) => {
-    if (!user || !messageContent.trim() || !hasConsented) return
+    if (!user || !messageContent.trim() || !hasConsented || !userData) return
 
     try {
       const { error } = await supabase
         .from('messages')
         .insert({
+          session_id: sessionId,
           group_id: groupId,
           user_id: user.id,
-          username: user.email || 'Anonymous',
+          username: userData.username,
           content: messageContent.trim(),
           audio_url: null
         })

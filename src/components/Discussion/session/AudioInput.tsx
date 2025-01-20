@@ -72,36 +72,55 @@ const AudioInput: React.FC<AudioInputProps> = ({
       console.log('Received transcript:', data);
       const { is_final: isFinal } = data;
       const transcript = data.channel.alternatives[0].transcript;
-
+    
       if (transcript !== '' && isFinal) {
         setIsProcessing(true);
         try {
           await onMessageSubmit(transcript);
-
+    
           // Upload audio to Supabase
           try {
+            console.log('Audio chunks available:', audioChunksRef.current.length);
+            
+            if (audioChunksRef.current.length === 0) {
+              console.log('No audio chunks available');
+              return;
+            }
+    
             const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-            audioChunksRef.current = []; // Clear chunks after creating blob
-            const originalUrl = await uploadToSupabase(audioBlob, false);
+            console.log('Created audio blob:', audioBlob.size, 'bytes');
+            
             const pitchedAudioBlob = await pitchShiftAudio(audioBlob);
+            console.log('Created pitched audio blob:', pitchedAudioBlob.size, 'bytes');
+            
             const pitchedUrl = await uploadToSupabase(pitchedAudioBlob, true);
-
+            console.log('Pitched audio uploaded:', pitchedUrl);
+    
             const supabase = await createClient();
             await supabase
               .from('messages')
               .update({ 
-                audio_url: originalUrl,
-                pitched_audio_url: pitchedUrl 
+                audio_url: pitchedUrl 
               })
               .eq('content', transcript)
               .eq('user_id', userId)
+              .eq('session_id', sessionId)
               .order('created_at', { ascending: false })
               .limit(1);
+            
+            console.log('Message updated with audio URLs');
           } catch (error) {
             console.log('Error processing and uploading audio:', error);
+            // Log more details about the error
+            if (error instanceof Error) {
+              console.log('Error details:', error.message);
+              console.log('Error stack:', error.stack);
+            }
           }
         } finally {
           setIsProcessing(false);
+          // Clear the chunks after successful processing or in case of error
+          audioChunksRef.current = [];
         }
       }
     };

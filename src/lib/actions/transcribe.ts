@@ -40,7 +40,7 @@ export async function transcribeAudio(formData: FormData) {
       words: transcription.words
     }
   } catch (error) {
-    console.error('Full transcription error:', error)
+    console.log('Full transcription error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to transcribe audio'
