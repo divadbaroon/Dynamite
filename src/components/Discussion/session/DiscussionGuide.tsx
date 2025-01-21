@@ -518,7 +518,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                 </p>
                 <p className="text-sm text-gray-600">
                   Your discussion is being analyzed in real-time.
-                  Key points will appear here automatically as they're identified.
+                  Key points will appear here automatically as they`&apos;`re identified.
                 </p>
               </div>
 
