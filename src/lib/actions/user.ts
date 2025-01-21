@@ -1,8 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { generateUsername } from 'unique-username-generator'
-
+import { uniqueNamesGenerator, Config, adjectives, animals } from 'unique-names-generator'
 import { UserData } from "@/types"
 
 export async function createAnonymousUser(sessionId: string, consentStatus: boolean) {
@@ -40,7 +39,15 @@ export async function createAnonymousUser(sessionId: string, consentStatus: bool
       throw authError || new Error('Failed to create anonymous user')
     }
 
-    const username = generateUsername()
+    // Configure username generation
+    const config: Config = {
+      dictionaries: [adjectives, animals],
+      separator: '',
+      length: 2,
+      style: 'capital'
+    }
+
+    const username = uniqueNamesGenerator(config)
 
     const { error: dbError } = await supabase
       .from('users')
