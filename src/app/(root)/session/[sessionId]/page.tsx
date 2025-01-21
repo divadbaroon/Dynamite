@@ -1,7 +1,12 @@
 import { SessionContent } from "./SessionContent"
 
-import { SessionProps } from "@/types"
+type Params = Promise<{ sessionId: string }>;
 
-export default function SessionPage({ params }: SessionProps) {
-    return <SessionContent sessionId={params.sessionId} />
+export default async function SessionPage({ 
+  params 
+}: { 
+  params: Params 
+}) {
+  const resolvedParams = await params;
+  return <SessionContent sessionId={resolvedParams.sessionId} />
 }
