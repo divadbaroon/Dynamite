@@ -12,10 +12,12 @@ import { login, signup } from "./actions";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: SearchParams;
 }) {
   const supabase = await createClient();
 
@@ -27,7 +29,8 @@ export default async function Login({
     return redirect("/");
   }
 
-  const message = searchParams.message as string | undefined;
+  const resolvedParams = await searchParams;
+  const message = resolvedParams.message as string | undefined;
 
   return (
     <section className="h-[calc(55vh-57px)] flex justify-center items-center">
