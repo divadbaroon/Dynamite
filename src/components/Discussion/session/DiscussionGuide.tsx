@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"
+import { Trash2 } from "lucide-react"
 import { Session } from "@/types"
 import { createClient } from "@/utils/supabase/client"
 
-import { DiscussionGuideProps, Answers, SharedAnswers, SharedAnswersRow } from "@/types"
+import { DiscussionGuideProps, Answers, SharedAnswers, SharedAnswersRow, BulletPoint } from "@/types"
 
 function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   const [timeLeft, setTimeLeft] = useState(() => {
@@ -29,7 +30,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   
   const [isRunning, setIsRunning] = useState(session?.status === 'active')
   const [loading, setLoading] = useState(true)
-  const [answers ] = useState<Answers>(() => {
+  const [answers] = useState<Answers>(() => {
     const savedAnswers = localStorage.getItem('discussionAnswers');
     return savedAnswers ? JSON.parse(savedAnswers) : {};
   });
@@ -46,6 +47,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
 
   const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null);
   const [editedContent, setEditedContent] = useState("");
+  const [deletedItems, setDeletedItems] = useState<{[key: string]: boolean[]}>({});
 
   const [currentPointIndex, setCurrentPointIndex] = useState(0);
   const [pointTimeLeft, setPointTimeLeft] = useState(180); // 3 minutes in seconds
@@ -147,7 +149,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
         (payload) => {
           const newAnswers = (payload.new as SharedAnswersRow)?.answers;
           if (newAnswers && typeof newAnswers === 'object') {
-            setSharedAnswers(newAnswers);  // No need for type assertion here
+            setSharedAnswers(newAnswers);
           }
         }
       )
@@ -211,7 +213,6 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                     .from('sessions')
                     .update({ 
                       current_point: nextPointIndex,
-                      updated_at: new Date().toISOString()
                     })
                     .eq('id', session!.id)
                     .select(); 
@@ -239,13 +240,11 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       if (timer) clearInterval(timer);
     };
   }, [isRunning, mode, pointTimeLeft, currentPointIndex, session?.id]);
-  
-  // Add this effect to log state changes
+
   useEffect(() => {
     console.log('Current point index changed to:', currentPointIndex);
   }, [currentPointIndex]);
 
-  // Save answers to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('discussionAnswers', JSON.stringify(answers));
   }, [answers]);
@@ -256,13 +255,96 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // const handleInputChange = (field: keyof typeof answers, value: string) => {
-    // setAnswers((prev: Answers) => ({ ...prev, [field]: value }));
-  //};
-
   const handleReview = () => {
     setIsReviewOpen(true)
   }
+
+  const handleDelete = async (pointIndex: number, bulletIndex: number) => {
+    try {
+      const updatedAnswers = { ...sharedAnswers };
+      const key = `point${pointIndex}`;
+      
+      // Instead of filtering out the item, update its isDeleted flag
+      if (typeof updatedAnswers[key][bulletIndex] === 'string') {
+        // If the item is a string, convert it to a BulletPoint object
+        updatedAnswers[key][bulletIndex] = {
+          content: updatedAnswers[key][bulletIndex],
+          isDeleted: true
+        };
+      } else {
+        // If it's already a BulletPoint object, just update isDeleted
+        updatedAnswers[key][bulletIndex] = {
+          ...updatedAnswers[key][bulletIndex],
+          isDeleted: true
+        };
+      }
+  
+      const { error } = await supabase
+        .from('shared_answers')
+        .upsert({
+          session_id: session?.id,
+          group_id: groupId,
+          answers: updatedAnswers,
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'session_id,group_id' 
+        });
+  
+      if (error) throw error;
+      
+      // Update deleted items state for UI
+      setDeletedItems(prev => ({
+        ...prev,
+        [`point${pointIndex}`]: [
+          ...(prev[`point${pointIndex}`] || Array(sharedAnswers[`point${pointIndex}`]?.length || 0).fill(false)),
+          true
+        ]
+      }));
+      
+      toast.success('Bullet point deleted');
+    } catch (error) {
+      console.error('Error deleting bullet point:', error);
+      toast.error('Failed to delete bullet point');
+    }
+  };
+
+  const handleSaveEdit = async (pointIndex: number, bulletIndex: number, newContent: string) => {
+    try {
+      const updatedAnswers = { ...sharedAnswers };
+      const key = `point${pointIndex}`;
+      
+      // Convert to BulletPoint array if needed
+      if (typeof updatedAnswers[key][bulletIndex] === 'string') {
+        updatedAnswers[key] = updatedAnswers[key].map((content: string | BulletPoint) => 
+          typeof content === 'string' ? { content, isDeleted: false } : content
+        );
+      }
+      
+      // Update the content while preserving isDeleted status
+      updatedAnswers[key][bulletIndex] = {
+        ...updatedAnswers[key][bulletIndex],
+        content: newContent,
+      };
+  
+      const { error } = await supabase
+        .from('shared_answers')
+        .upsert({
+          session_id: session?.id,
+          group_id: groupId,
+          answers: updatedAnswers,
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'session_id,group_id' 
+        });
+  
+      if (error) throw error;
+      setEditingPoint(null);
+      toast.success('Bullet point updated');
+    } catch (error) {
+      console.error('Error updating bullet point:', error);
+      toast.error('Failed to update bullet point');
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -291,13 +373,13 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       setIsReviewOpen(false);
       
       await toast.promise(
-        new Promise((resolve) => setTimeout(resolve, 3000)), // Increased delay to 3 seconds
+        new Promise((resolve) => setTimeout(resolve, 3000)),
         {
           loading: 'Submitting your answers...',
           success: () => {
             setTimeout(() => {
               window.location.href = '/';
-            }, 2000); // Additional 2 second delay after the toast
+            }, 2000);
             return 'Answers submitted successfully! You will be exited from the conversation shortly.';
           },
           error: 'Failed to submit answers',
@@ -332,29 +414,10 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     );
   }
 
-  const handleSaveEdit = async (pointIndex: number, bulletIndex: number, newContent: string) => {
-    try {
-      const updatedAnswers = { ...sharedAnswers };
-      updatedAnswers[`point${pointIndex}`][bulletIndex] = newContent;
-  
-      const { error } = await supabase
-        .from('shared_answers')
-        .upsert({
-          session_id: session?.id,
-          group_id: groupId,
-          answers: updatedAnswers,
-          last_updated: new Date().toISOString()
-        }, {
-          onConflict: 'session_id,group_id' 
-        });
-  
-      if (error) throw error;
-      setEditingPoint(null);
-      toast.success('Bullet point updated');
-    } catch (error) {
-      console.error('Error updating bullet point:', error);
-      toast.error('Failed to update bullet point');
-    }
+  const getTimerColor = (timeLeft: number) => {
+    if (timeLeft > 120) return 'bg-green-500'; // First minute - green
+    if (timeLeft > 60) return 'bg-yellow-500';  // Second minute - yellow
+    return 'bg-red-500'; // Last minute - red
   };
 
   const renderAccordionContent = (point: string, index: number) => {
@@ -369,76 +432,85 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   
     const bulletPoints = sharedAnswers[`point${index}`] || [];
     const isCurrentPoint = index === currentPointIndex;
-
-    const getTimerColor = (timeLeft: number) => {
-      if (timeLeft > 120) return 'bg-green-500'; // First minute - green
-      if (timeLeft > 60) return 'bg-yellow-500';  // Second minute - yellow
-      return 'bg-red-500'; // Last minute - red
-    };
   
     return (
       <div className="space-y-4">
-       
-      
         {/* Bullet points section */}
         {bulletPoints.length > 0 ? (
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            {bulletPoints.map((point, i) => (
-              <div key={i} className="flex items-start gap-2 group">
-                <span className="text-gray-500 pt-1.5 -mt-1.5">•</span>
-                {editingPoint?.index === index && editingPoint?.bulletIndex === i ? (
-                  <div className="flex-1 flex items-center gap-2">
-                    <Input
-                      className="flex-1"
-                      value={editedContent}
-                      onChange={(e) => setEditedContent(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveEdit(index, i, editedContent);
-                        } else if (e.key === 'Escape') {
-                          setEditingPoint(null);
-                        }
-                      }}
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveEdit(index, i, editedContent)}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditingPoint(null)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-start justify-between group">
-                    <p className="text-sm text-gray-600">{point}</p>
-                    {isCurrentPoint && (
+            {bulletPoints
+              .map((point, originalIndex) => ({ point, originalIndex }))
+              .filter(({ point }) => {
+                if (typeof point === 'string') return true;
+                return !point.isDeleted;
+              })
+              .map(({ point, originalIndex: i }) => (
+                <div key={i} className="flex items-start gap-2 group">
+                  <span className="text-gray-500 pt-1.5 -mt-1.5">•</span>
+                  {editingPoint?.index === index && editingPoint?.bulletIndex === i ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        className="flex-1"
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveEdit(index, i, editedContent);
+                          } else if (e.key === 'Escape') {
+                            setEditingPoint(null);
+                          }
+                        }}
+                        autoFocus
+                      />
                       <Button
                         size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingPoint({ index, bulletIndex: i });
-                          setEditedContent(point);
-                        }}
+                        onClick={() => handleSaveEdit(index, i, editedContent)}
                       >
-                        Edit
+                        Save
                       </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingPoint(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-start justify-between group">
+                      <p className="text-sm text-gray-600">
+                        {typeof point === 'string' ? point : point.content}
+                      </p>
+                      {isCurrentPoint && (
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingPoint({ index, bulletIndex: i });
+                              setEditedContent(typeof point === 'string' ? point : point.content);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleDelete(index, i)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         ) : (
           <div className="bg-gray-50 p-6 rounded-lg">
             <div className="flex flex-col items-center space-y-4">
-              
               {/* Main text */}
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium text-gray-900">
@@ -446,7 +518,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                 </p>
                 <p className="text-sm text-gray-600">
                   Your discussion is being analyzed in real-time.
-                  Key points will appear here automatically as they`&apos;`re identified.
+                  Key points will appear here automatically as they're identified.
                 </p>
               </div>
 
@@ -458,40 +530,40 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
               </div>
             </div>
           </div>
-        )} 
+        )}
 
-         {/* Timer section - moved to top */}
-      {isCurrentPoint && (
-        <div className="bg-gray-50 p-4 rounded-lg mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">Time Remaining</span>
-            <span className={`text-lg font-bold ${pointTimeLeft <= 60 ? 'text-red-500' : ''}`}>
-              {Math.floor(pointTimeLeft / 60)}:{(pointTimeLeft % 60).toString().padStart(2, '0')}
-            </span>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${getTimerColor(pointTimeLeft)} transition-all duration-300`}
-              style={{ 
-                width: `${(pointTimeLeft / 180) * 100}%`,
-                transition: 'width 1s linear'
-              }}
-            />
-          </div>
-
-          {/* Helper text */}
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <span>Discussion Point {currentPointIndex + 1} of {session!.discussion_points.length}</span>
-            {pointTimeLeft <= 30 && (
-              <span className="text-red-500 font-medium animate-pulse">
-                Wrapping up soon...
+        {/* Timer section */}
+        {isCurrentPoint && (
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">Time Remaining</span>
+              <span className={`text-lg font-bold ${pointTimeLeft <= 60 ? 'text-red-500' : ''}`}>
+                {Math.floor(pointTimeLeft / 60)}:{(pointTimeLeft % 60).toString().padStart(2, '0')}
               </span>
-            )}
+            </div>
+            
+            {/* Progress bar */}
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={`h-full ${getTimerColor(pointTimeLeft)} transition-all duration-300`}
+                style={{ 
+                  width: `${(pointTimeLeft / 180) * 100}%`,
+                  transition: 'width 1s linear'
+                }}
+              />
+            </div>
+
+            {/* Helper text */}
+            <div className="mt-2 flex justify-between text-xs text-gray-500">
+              <span>Discussion Point {currentPointIndex + 1} of {session!.discussion_points.length}</span>
+              {pointTimeLeft <= 30 && (
+                <span className="text-red-500 font-medium animate-pulse">
+                  Wrapping up soon...
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      )}   
+        )}
       </div>
     );
   };
@@ -547,7 +619,6 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                     <div className="flex gap-2">
                       <span className="w-6">{index + 1}.</span>
                       <span>{point}</span>
-                      
                     </div>
                   </AccordionTrigger>
                   {index === currentPointIndex && (
@@ -632,17 +703,29 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                                   </div>
                                 ) : (
                                   <div className="flex-1 flex items-start justify-between group">
-                                    <p className="text-sm text-gray-600">{point}</p>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        setEditingPoint({ index, bulletIndex: i });
-                                        setEditedContent(point);
-                                      }}
-                                    >
-                                      Edit
-                                    </Button>
+                                    <p className={`text-sm ${deletedItems[`point${index}`]?.[i] ? 'text-gray-400 line-through' : 'text-gray-600'}`}>
+                                      {typeof point === 'string' ? point : point.content}
+                                    </p>
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setEditingPoint({ index, bulletIndex: i });
+                                          setEditedContent(typeof point === 'string' ? point : point.content);
+                                        }}
+                                      >
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-red-500 hover:text-red-700"
+                                        onClick={() => handleDelete(index, i)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 )}
                               </div>

@@ -2,8 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import OpenAI from 'openai'
-
-import { SharedAnswers } from '@/types'
+import { SharedAnswers, BulletPoint } from '@/types'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -61,68 +60,100 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
 
     const transcript = messages.map(m => m.content).join('\n')
     
-    // Format current points and discussion points
+    // Format current points and discussion points, filtering out deleted items
     const numberedPoints = session.discussion_points
       .map((point, index) => {
         const pointKey = `point${index}` as keyof SharedAnswers;
         const currentBullets = currentAnswers?.answers ? 
           (currentAnswers.answers as SharedAnswers)[pointKey] || [] : 
           [];
-        const bulletPoints = currentBullets.map(bullet => `  • ${bullet}`).join('\n');
+          
+        // Convert and filter bullets
+        const bulletPoints = currentBullets
+          .map(bullet => {
+            if (typeof bullet === 'string') {
+              return `  • ${bullet}`;
+            }
+            // Only include non-deleted bullets
+            if (!bullet.isDeleted) {
+              return `  • ${bullet.content}`;
+            }
+            return null;
+          })
+          .filter(Boolean) // Remove null values
+          .join('\n');
+          
         return `${index + 1}. ${point}\nCurrent bullet points:\n${bulletPoints || '  (None)'}`
       })
       .join('\n\n');
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are analyzing a group discussion transcript. Your task is to:
-
-        1. ALWAYS KEEP ALL EXISTING BULLET POINTS EXACTLY AS THEY ARE - DO NOT MODIFY OR REMOVE ANY EXISTING POINTS.
-        2. For each discussion point, only analyze the new conversation transcript to identify additional points.
-        3. In your JSON response:
-          - First, copy all existing bullet points exactly as shown, maintaining their order
-          - Then add any new bullet points from the recent discussion
-          - Only add points that represent truly new insights
-          - Keep all bullet points clear and under 100 characters
-          - If no new points are found for a topic, just return the existing points
-
-        For example, if you see:
-        "1. Topic A
-        Current bullet points:
-          • Existing point 1
-          • Existing point 2"
-
-        Your response should be:
-        {
-          "point0": ["Existing point 1", "Existing point 2", "Any new point from transcript"]
-        }
-
-        IMPORTANT: The existing bullet points MUST appear first and exactly as shown in the current points.`
-        },
-        {
-          role: "user",
-          content: `Current Discussion Points and Bullets:\n${numberedPoints}\n\nRecent Transcript:\n${transcript}\n\nKeep ALL existing bullet points exactly as they are and add new ones only from the recent discussion.`
-        }
-      ],
-      response_format: { type: "json_object" }
-    })
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are analyzing a group discussion transcript. Your task is to:
+      
+          1. ALWAYS KEEP ALL EXISTING BULLET POINTS EXACTLY AS THEY ARE - DO NOT MODIFY OR REMOVE ANY EXISTING POINTS.
+          2. For each discussion point, only analyze the new conversation transcript to identify additional points.
+          3. In your JSON response:
+            - First, copy all existing bullet points exactly as shown, maintaining their order
+            - Then add any new bullet points from the recent discussion
+            - Only add points that represent truly new insights
+            - Keep all bullet points clear and under 100 characters
+            - If no new points are found for a topic, just return the existing points
+      
+          For example, if you see:
+          "1. Topic A
+          Current bullet points:
+            • Existing point 1
+            • Existing point 2"
+      
+          Your response should be:
+          {
+            "point0": ["Existing point 1", "Existing point 2", "Any new point from transcript"]
+          }
+      
+          IMPORTANT: The existing bullet points MUST appear first and exactly as shown in the current points.`
+          },
+          {
+            role: "user",
+            content: `Current Discussion Points and Bullets:\n${numberedPoints}\n\nRecent Transcript:\n${transcript}\n\nKeep ALL existing bullet points exactly as they are and add new ones only from the recent discussion.`
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
 
     const content = completion.choices[0].message.content
     if (!content) {
       throw new Error('No content received from OpenAI')
     }
 
-    const newBulletPoints = JSON.parse(content) as SharedAnswers
+    // Parse the response and preserve existing bullet point structure
+    const aiResponse = JSON.parse(content)
+    const newBulletPoints: SharedAnswers = {}
 
-    // Validate the response structure
+    // Process each point and preserve existing structure
     session.discussion_points.forEach((_, index) => {
       const key = `point${index}`;
-      if (!newBulletPoints[key]) {
-        newBulletPoints[key] = [];
-      }
+      const currentPoints = currentAnswers?.answers?.[key] || [];
+      const aiPoints = aiResponse[key] || [];
+      
+      newBulletPoints[key] = [];
+
+      // First, add existing points with their original structure
+      currentPoints.forEach((point: string | BulletPoint) => {
+        if (typeof point === 'string') {
+          newBulletPoints[key].push({ content: point, isDeleted: false });
+        } else {
+          newBulletPoints[key].push(point);
+        }
+      });
+
+      // Then add new points from AI as BulletPoint objects
+      aiPoints.slice(currentPoints.length).forEach((point: string) => {
+        newBulletPoints[key].push({ content: point, isDeleted: false });
+      });
     });
 
     const { error: upsertError } = await supabase
@@ -145,3 +176,5 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
     return { success: false, error: String(error) }
   }
 }
+
+
