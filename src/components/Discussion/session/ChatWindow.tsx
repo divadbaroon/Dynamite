@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"  
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,11 +14,7 @@ import { getUserById } from '@/lib/actions/user'
 import { updateUserConsent } from '@/lib/actions/user'
 import ConsentModal from '@/components/Discussion/consent/ConsentModal'
 import { DeepgramContextProvider } from '@/components/Discussion/session/DeepgramContextProvider'
-
-import { 
-
-  useDeepgram,
-} from './DeepgramContextProvider';
+import { useDeepgram } from './DeepgramContextProvider';
 
 const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { setDeepgramKey } = useDeepgram();
@@ -37,11 +32,6 @@ const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
-  // Check if Deepgram API key is available
-  const deepgramKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
-  if (!deepgramKey) {
-    console.error('Deepgram API key is not set in environment variables');
-  }
   const [userData, setUserData] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const [messages, setMessages] = useState<Message[]>([])
