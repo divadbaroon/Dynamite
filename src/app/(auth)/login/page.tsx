@@ -12,11 +12,15 @@ import { login, signup } from "./actions";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
+interface LoginPageProps {
+  searchParams: {
+    message?: string;
+  }
+}
+
 export default async function Login({
   searchParams,
-}: {
-  searchParams: { message: string };
-}) {
+}: LoginPageProps) {
   const supabase = await createClient();
 
   const {
