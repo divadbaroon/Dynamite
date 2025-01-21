@@ -90,8 +90,13 @@ export interface Answers {
   [key: string]: string;
 }
 
+export interface BulletPoint {
+  content: string;
+  isDeleted?: boolean;
+}
+
 export interface SharedAnswers {
-  [key: string]: string[];
+  [key: string]: BulletPoint[];
 }
 
 export interface SharedAnswersRow {
