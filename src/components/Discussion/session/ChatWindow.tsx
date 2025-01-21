@@ -16,6 +16,8 @@ import ConsentModal from '@/components/Discussion/consent/ConsentModal'
 import { DeepgramContextProvider } from '@/components/Discussion/session/DeepgramContextProvider'
 import { useDeepgram } from './DeepgramContextProvider';
 
+import { SupabaseUser, UserData } from "@/types"
+
 const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { setDeepgramKey } = useDeepgram();
   
@@ -32,8 +34,8 @@ const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
-  const [userData, setUserData] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(true)
@@ -70,14 +72,17 @@ function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
       
       try {
         const data = await getUserById(user.id)
-        setUserData(data)  // Store the full user data
-        setHasConsented(data?.consent_status ?? false)
+        if (data) {
+          // Type assertion to ensure the data matches our User type
+          setUserData(data as UserData)
+          setHasConsented(data.consent_status ?? false)
+        }
       } catch (error) {
         console.error('Error fetching user consent:', error)
         setHasConsented(false)
       }
     }
-
+  
     checkUserConsent()
   }, [user])
 

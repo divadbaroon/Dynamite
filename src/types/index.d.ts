@@ -79,3 +79,56 @@ export interface ChatWindowProps {
   groupId: string;
   sessionId: string;
 }
+
+export interface DiscussionGuideProps {
+  session: Session | null;
+  mode: 'usage-check' | 'waiting-room' | 'discussion';
+  groupId: string;
+}
+
+export interface Answers {
+  [key: string]: string;
+}
+
+export interface SharedAnswers {
+  [key: string]: string[];
+}
+
+export interface SharedAnswersRow {
+  id?: string;
+  group_id: string;
+  session_id: string;
+  answers: SharedAnswers;  
+  last_updated: string;
+}
+
+
+// User
+
+export interface SupabaseUser {
+  id: string
+  email?: string
+  phone?: string
+  display_name?: string
+  providers?: string[]
+  provider_type?: string
+  created_at: string
+  last_sign_in_at?: string
+}
+
+export interface UserData {
+  id: string
+  username: string
+  session_id: string | null
+  created_at: string
+  consent_status: boolean
+}
+
+// Audio
+
+export interface AudioInputProps {
+  onMessageSubmit: (message: string) => Promise<void>;
+  userId: string;
+  sessionId: string;
+  disabled?: boolean;
+}

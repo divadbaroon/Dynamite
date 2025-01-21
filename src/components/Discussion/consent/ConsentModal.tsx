@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertCircle, Info, ChevronDown, ChevronUp, Handshake, Mail, X } from 'lucide-react';
+import { AlertCircle, Info, ChevronDown, ChevronUp, Handshake, Mail } from 'lucide-react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface ConsentModalProps {
@@ -46,7 +46,7 @@ const ConsentModal = ({
             <p className="text-lg leading-relaxed">
               EthicConvo facilitates real-time collaboration, discussion, and problem-solving 
               among students, going beyond traditional assignments to reveal critical aspects 
-              of students' mental models, teamwork skills, and learning progress.
+              of students`&apos;` mental models, teamwork skills, and learning progress.
             </p>
           </div>
 

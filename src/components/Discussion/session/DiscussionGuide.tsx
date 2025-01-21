@@ -6,26 +6,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input";
 import { Session } from "@/types"
 import { createClient } from "@/utils/supabase/client"
 
-export interface DiscussionGuideProps {
-  session: Session | null;
-  mode: 'usage-check' | 'waiting-room' | 'discussion';
-  groupId: string;
-}
-
-interface Answers {
-  [key: string]: string;
-}
-
-interface SharedAnswers {
-  [key: string]: string[];
-}
+import { DiscussionGuideProps, Answers, SharedAnswers, SharedAnswersRow } from "@/types"
 
 function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   const [timeLeft, setTimeLeft] = useState(() => {
@@ -158,9 +145,9 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
           filter: `group_id=eq.${groupId}`
         },
         (payload) => {
-          const newAnswers = (payload.new as any)?.answers;
+          const newAnswers = (payload.new as SharedAnswersRow)?.answers;
           if (newAnswers && typeof newAnswers === 'object') {
-            setSharedAnswers(newAnswers as SharedAnswers);
+            setSharedAnswers(newAnswers);  // No need for type assertion here
           }
         }
       )
@@ -181,7 +168,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       localStorage.setItem('timerTimestamp', Date.now().toString());
       
       timer = setInterval(() => {
-        setTimeLeft((prevTime: any) => {
+        setTimeLeft((prevTime: number) => {
           const newTime = Math.max(0, prevTime - 1);
           
           localStorage.setItem('timeLeft', newTime.toString());
@@ -269,9 +256,9 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleInputChange = (field: keyof typeof answers, value: string) => {
-    setAnswers((prev: Answers) => ({ ...prev, [field]: value }));
-  };
+  // const handleInputChange = (field: keyof typeof answers, value: string) => {
+    // setAnswers((prev: Answers) => ({ ...prev, [field]: value }));
+  //};
 
   const handleReview = () => {
     setIsReviewOpen(true)
@@ -459,7 +446,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                 </p>
                 <p className="text-sm text-gray-600">
                   Your discussion is being analyzed in real-time.
-                  Key points will appear here automatically as they're identified.
+                  Key points will appear here automatically as they`&apos;`re identified.
                 </p>
               </div>
 

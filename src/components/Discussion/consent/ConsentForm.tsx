@@ -60,7 +60,7 @@ export default function ConsentPage({
               <p className="text-lg leading-relaxed">
                 EthicConvo facilitates real-time collaboration, discussion, and problem-solving 
                 among students, going beyond traditional assignments to reveal critical aspects 
-                of students' mental models, teamwork skills, and learning progress.
+                of students`&apos;` mental models, teamwork skills, and learning progress.
               </p>
             </div>
 

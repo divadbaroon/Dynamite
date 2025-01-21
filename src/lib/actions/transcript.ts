@@ -3,20 +3,11 @@
 import { createClient } from '@/utils/supabase/server'
 import OpenAI from 'openai'
 
+import { SharedAnswers } from '@/types'
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
-
-interface SharedAnswers {
-  [key: string]: string[];
-}
-
-interface AnswerRecord {
-  answers: SharedAnswers;
-  session_id: string;
-  group_id: string;
-  last_updated: string;
-}
 
 export async function analyzeTranscript(groupId: string, sessionId: string) {
   const supabase = await createClient()
@@ -24,7 +15,7 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
   try {
     // Fetch current answers and locked points
     const { data: currentAnswers, error: answersError } = await supabase
-      .from('shared_answers' as any)
+      .from('shared_answers')
       .select('answers')
       .eq('session_id', sessionId)
       .eq('group_id', groupId)
@@ -38,7 +29,7 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
     
     const { data: messages, error: messagesError } = await supabase
-      .from('messages' as any)
+      .from('messages')
       .select('content, created_at')
       .eq('group_id', groupId)
       .gte('created_at', tenMinutesAgo.toISOString())
@@ -135,16 +126,16 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
     });
 
     const { error: upsertError } = await supabase
-    .from('shared_answers' as any)
-    .upsert({
-      session_id: sessionId,
-      group_id: groupId,
-      answers: newBulletPoints,
-      last_updated: new Date().toISOString()
-    }, {
-      onConflict: 'session_id,group_id',
-      ignoreDuplicates: false
-    });
+      .from('shared_answers')
+      .upsert({
+        session_id: sessionId,
+        group_id: groupId,
+        answers: newBulletPoints,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'session_id,group_id',
+        ignoreDuplicates: false
+      });
 
     if (upsertError) throw upsertError
 

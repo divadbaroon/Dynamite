@@ -3,7 +3,6 @@
 import {
   createClient,
   LiveClient,
-  LiveConnectionState,
   LiveTranscriptionEvents,
   SOCKET_STATES,
   type LiveSchema,

@@ -3,21 +3,14 @@
 import { createClient } from '@/utils/supabase/server'
 import { generateUsername } from 'unique-username-generator'
 
-type User = {
-  id: string
-  username: string
-  user_id: string
-  session_id: string | null
-  created_at: string
-  consent_status: boolean | null
-}
+import { UserData } from "@/types"
 
 export async function createAnonymousUser(sessionId: string, consentStatus: boolean) {
   const supabase = await createClient()
 
   try {
     // Check if user is already signed in
-    const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession()
+    const { data: { session: existingSession } } = await supabase.auth.getSession()
 
     if (existingSession?.user) {
       // User exists, check if we need to update consent
@@ -105,7 +98,7 @@ export async function getUserById(userId: string) {
     if (error) throw error
     if (!data) throw new Error("User not found")
 
-    return data as User
+    return data as UserData
   } catch (error) {
     console.error('Error getting user by Id:', error)
     return null

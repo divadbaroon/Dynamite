@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { GroupJoinResponse, Group } from '@/types'
+import { GroupJoinResponse } from '@/types'
 
 export async function joinOrCreateGroup(sessionId: string, groupNumber: number): Promise<GroupJoinResponse> {
   const supabase = await createClient()
@@ -15,7 +15,7 @@ export async function joinOrCreateGroup(sessionId: string, groupNumber: number):
     }
 
     // First, check if the group exists
-    let { data: existingGroup, error: fetchError } = await supabase
+    const { data: existingGroup, error: fetchError } = await supabase
       .from('groups')
       .select('*')
       .eq('session_id', sessionId)

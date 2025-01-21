@@ -11,12 +11,7 @@ import {
   useDeepgram,
 } from './DeepgramContextProvider';
 
-interface AudioInputProps {
-  onMessageSubmit: (message: string) => Promise<void>;
-  userId: string;
-  sessionId: string;
-  disabled?: boolean;
-}
+import { AudioInputProps } from "@/types"
 
 const AudioInput: React.FC<AudioInputProps> = ({
   onMessageSubmit,
@@ -253,7 +248,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
       const timestamp = new Date().toISOString();
       const filename = `recordings/${sessionId}/${userId}_${timestamp}${isPitched ? '_pitched' : ''}.webm`;
       const supabase = await createClient();
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('audio-recordings')
         .upload(filename, audioBlob, {
           contentType: 'audio/webm',

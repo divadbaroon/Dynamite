@@ -52,7 +52,7 @@ export default function CreateSessionPage() {
   
     setIsCreating(true)
     try {
-      const { session, error } = await createSession({
+      const { error } = await createSession({
         title,
         status: 'active',
         task,

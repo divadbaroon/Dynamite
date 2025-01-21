@@ -14,7 +14,7 @@ import Link from "next/link";
 import EthicConvoLogo from "../../../public/assets/logo/EthicConvoLogo";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { login, signup, signOut } from "@/app/(auth)/login/actions";
+import { signOut } from "@/app/(auth)/login/actions";
 import { User } from '@supabase/supabase-js';
 
 // Navigation items
