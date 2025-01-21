@@ -1,7 +1,14 @@
 import JoinSessionClient from '../../../../../components/Discussion/group/JoinSessionClient';
 
-export default function JoinSession({ params }: { params: { sessionId: string }}) {
+type Params = Promise<{ sessionId: string }>;
+
+export default async function JoinSession({ 
+  params 
+}: { 
+  params: Params 
+}) {
+  const resolvedParams = await params;
   return (
-    <JoinSessionClient sessionId={params.sessionId} />
+    <JoinSessionClient sessionId={resolvedParams.sessionId} />
   );
 }
