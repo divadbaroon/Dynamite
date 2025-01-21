@@ -1,7 +1,20 @@
 import DiscussionClient from './DiscussionClient';
 
-export default function Discussion({ params }: { params: { sessionId: string; groupId: string; } }) {
+type Params = Promise<{ 
+  sessionId: string;
+  groupId: string;
+}>;
+
+export default async function Discussion({ 
+  params 
+}: { 
+  params: Params 
+}) {
+  const resolvedParams = await params;
   return (
-    <DiscussionClient sessionId={params.sessionId} groupId={params.groupId} />
+    <DiscussionClient 
+      sessionId={resolvedParams.sessionId} 
+      groupId={resolvedParams.groupId} 
+    />
   );
 }
