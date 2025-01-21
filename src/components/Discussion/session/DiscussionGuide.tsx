@@ -29,7 +29,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   
   const [isRunning, setIsRunning] = useState(session?.status === 'active')
   const [loading, setLoading] = useState(true)
-  const [answers, setAnswers] = useState<Answers>(() => {
+  const [answers ] = useState<Answers>(() => {
     const savedAnswers = localStorage.getItem('discussionAnswers');
     return savedAnswers ? JSON.parse(savedAnswers) : {};
   });
@@ -267,7 +267,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
   const handleSubmit = async () => {
     try {
       // Save answers to Supabase
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('answers')  
         .insert([
           {
