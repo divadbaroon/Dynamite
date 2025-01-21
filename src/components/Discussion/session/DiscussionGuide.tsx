@@ -28,7 +28,17 @@ interface SharedAnswers {
 }
 
 function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
-  const [timeLeft, setTimeLeft] = useState(600)
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const savedTime = localStorage.getItem('timeLeft');
+    const savedTimestamp = localStorage.getItem('timerTimestamp');
+    
+    if (savedTime && savedTimestamp) {
+      const elapsedTime = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
+      const remainingTime = Math.max(0, parseInt(savedTime) - elapsedTime);
+      return remainingTime;
+    }
+    return session?.time_left || 600;
+  });
   
   const [isRunning, setIsRunning] = useState(session?.status === 'active')
   const [loading, setLoading] = useState(true)
@@ -269,20 +279,18 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
 
   const handleSubmit = async () => {
     try {
-      // Show loading toast immediately
-      const loadingToast = toast.loading('Submitting your answers...');
-  
       // Save answers to Supabase
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('answers')  
         .insert([
           {
             session_id: session?.id,
             user_id: session?.author,
-            answers: sharedAnswers, 
+            answers: answers,
             submitted_at: new Date().toISOString()
           }
-        ]);
+        ])
+        .select();
   
       if (error) throw error;
   
@@ -294,16 +302,20 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       
       setIsSubmitted(true);
       setIsReviewOpen(false);
-  
-      // Dismiss loading toast and show success
-      toast.dismiss(loadingToast);
-      toast.success('Answers submitted successfully!');
-  
-      // Delay redirect to show the success message
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-  
+      
+      await toast.promise(
+        new Promise((resolve) => setTimeout(resolve, 3000)), // Increased delay to 3 seconds
+        {
+          loading: 'Submitting your answers...',
+          success: () => {
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 2000); // Additional 2 second delay after the toast
+            return 'Answers submitted successfully! You will be exited from the conversation shortly.';
+          },
+          error: 'Failed to submit answers',
+        }
+      );
     } catch (error) {
       console.error('Error submitting answers:', error);
       toast.error("Failed to submit answers");
