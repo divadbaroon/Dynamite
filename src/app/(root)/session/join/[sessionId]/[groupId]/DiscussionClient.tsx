@@ -62,7 +62,7 @@ function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
         // Run initial analysis
         runAnalysis()
 
-        // Set up interval (every 2 minutes)
+        // Set up interval (every 10 seconds)
         const intervalId = setInterval(runAnalysis, 1 * 10 * 1000)
 
         return () => clearInterval(intervalId)
