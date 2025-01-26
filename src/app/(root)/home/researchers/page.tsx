@@ -7,7 +7,7 @@ export default function JoinUs() {
       <div className="max-w-4xl mx-auto space-y-8"> 
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center">Interested in Joining VizPI?</CardTitle>
+            <CardTitle className="text-3xl font-bold text-center">Interested in Joining EthicConvo's team?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
@@ -18,7 +18,7 @@ export default function JoinUs() {
             <p>
               If you have any questions or want to apply, please write us an email at{" "}
               <a href="mailto:info@VizPI.org" className="text-primary hover:underline">
-                info@VizPI.org
+                info@EthicConvo.org
               </a>
               .
             </p>
