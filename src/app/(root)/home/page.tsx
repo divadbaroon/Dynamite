@@ -16,14 +16,14 @@ const Homepage = () => {
                 insights into their cognitive processes and understanding of programming
                 concepts. By facilitating real-time collaboration, discussion, and problem-
                 solving among students, these exercises go beyond traditional
-                assignments, revealing critical aspects of students&apos; mental models,
+                assignments, revealing critical aspects of students mental models,
                 teamwork skills, and learning progress.
               </p>
             </div>
             <Card className="bg-blue-100 flex-shrink-0 w-full md:w-64">
               <CardContent className="p-6 flex flex-col items-center justify-center h-full">
                 <h2 className="text-4xl font-bold mb-2">2586</h2>
-                <p className="text-lg text-center">Students Engaged in EthicConvo-Powered Sessions</p>
+                <p className="text-lg text-center">Students Engaged in EthicConvo-Powered Discussions</p>
               </CardContent>
             </Card>
           </div>
