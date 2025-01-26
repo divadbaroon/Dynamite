@@ -9,12 +9,12 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { createClient } from "@/utils/supabase/client"
 import { Message, ChatWindowProps } from '@/types'
-import AudioInput from '@/components/Discussion/audio/AudioInput'
+import AudioInput from '@/components/Discussion/Audio/AudioInput'
 import { getUserById } from '@/lib/actions/user'
 import { updateUserConsent } from '@/lib/actions/user'
-import ConsentModal from '@/components/Discussion/consent/ConsentModal'
+import ConsentModal from '@/components/Discussion/Consent/ConsentModal'
 import { DeepgramContextProvider } from '@/components/Discussion/audio/DeepgramContextProvider'
-import { useDeepgram } from '../audio/DeepgramContextProvider';
+import { useDeepgram } from '../../audio/DeepgramContextProvider';
 
 import { SupabaseUser, UserData } from "@/types"
 
