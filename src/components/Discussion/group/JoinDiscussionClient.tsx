@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ConsentPage from '@/components/Discussion/consent/ConsentForm';
+import ConsentPage from '@/components/Discussion/Consent/ConsentForm';
 
 import { JoinDiscussionClientProps } from "@/types"
 

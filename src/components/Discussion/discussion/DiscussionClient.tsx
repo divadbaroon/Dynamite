@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import ChatWindow from '@/components/Discussion/discussion/ChatWindow'
-import DiscussionGuide from '@/components/Discussion/discussion/DiscussionGuide'
+import ChatWindow from '@/components/Discussion/Discussion/ChatWindow/ChatWindow'
+import DiscussionGuide from '@/components/Discussion/Discussion/DiscussionGuide/DiscussionGuide'
 import { getDiscussionById } from '@/lib/actions/discussion'
 import { analyzeTranscript } from '@/lib/actions/transcript'
 import { Discussion, DiscussionClientProps } from '@/types'

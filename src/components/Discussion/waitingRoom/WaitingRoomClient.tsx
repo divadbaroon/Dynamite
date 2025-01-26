@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import DiscussionGuide from '@/components/Discussion/discussion/DiscussionGuide';
+import DiscussionGuide from '@/components/Discussion/Discussion/DiscussionGuide/DiscussionGuide';
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
