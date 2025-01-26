@@ -1,4 +1,4 @@
-import WaitingRoomClient from '@/components/Discussion/waitingroom/WaitingRoomClient';
+import WaitingRoomClient from '@/components/Discussion/waiting-room/WaitingRoomClient';
 
 type Params = Promise<{ 
   discussionId: string;
