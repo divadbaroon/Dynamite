@@ -11,7 +11,7 @@ import { createAnonymousUser } from "@/lib/actions/user"
 import { ConsentPageProps } from "@/types"
 
 export default function ConsentPage({ 
-  sessionId, 
+  discussionId, 
   onAccountCreated,
   onError
 }: ConsentPageProps) {
@@ -24,7 +24,7 @@ export default function ConsentPage({
     setIsProcessing(true);
     
     try {
-      const { user, error } = await createAnonymousUser(sessionId, isChecked)
+      const { user, error } = await createAnonymousUser(discussionId, isChecked)
       
       if (error) throw error
       if (!user) throw new Error('No user created')
@@ -58,9 +58,9 @@ export default function ConsentPage({
                 What is EthicConvo?
               </h3>
               <p className="text-lg leading-relaxed">
-                EthicConvo facilitates real-time collaboration, discussion, and problem-solving 
-                among students, going beyond traditional assignments to reveal critical aspects 
-                of students`&apos;` mental models, teamwork skills, and learning progress.
+                EthicConvo is a platform that facilitates real-time collaboration, discussion, and problem-solving among students.
+                It goes beyond traditional assignments to reveal critical aspects 
+                of students&apos; mental models, teamwork skills, and learning progress.
               </p>
             </div>
 
