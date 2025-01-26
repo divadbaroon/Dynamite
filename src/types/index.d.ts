@@ -1,9 +1,9 @@
 
 // Sessions
-export type Session = {
+export type Discussion = {
     id: string
     created_at: string
-    status: 'pending' | 'active' | 'completed' 
+    status: 'draft' | 'active' | 'completed' 
     title: string
     task: string | null
     scenario: string | null
@@ -15,22 +15,22 @@ export type Session = {
     current_point?: number
   }
 
-export interface SessionProps {
+export interface DiscussionProps {
   params: {
-    sessionId: string
+    discussionId: string
   }
 }
 
-export interface SessionContentProps {
-  sessionId: string
+export interface DiscussionContentProps {
+  discussionId: string
 }
 
-export interface JoinSessionClientProps {
-  sessionId: string;
+export interface JoinDiscussionClientProps {
+  discussionId: string;
 }
 
 export interface ConsentPageProps {
-  sessionId: string
+  discussionId: string
   onAccountCreated: () => void
   onError: (error: string) => void
 }
@@ -50,7 +50,7 @@ export type GroupJoinResponse = {
 }
 
 export interface GroupSelectionClientProps {
-  sessionId: string;
+  discussionId: string;
 }
 
 // Messages
@@ -66,22 +66,22 @@ export interface Message {
 
 // Discussion
 export interface DiscussionClientProps {
-  sessionId: string;
+  discussionId: string;
   groupId: string;
 }
 
 export interface DiscussionGuideProps {
-  session: Session | null;
+  discussion: Discussion | null;
   groupId: string;
 }
 
 export interface ChatWindowProps {
   groupId: string;
-  sessionId: string;
+  discussionId: string;
 }
 
 export interface DiscussionGuideProps {
-  session: Session | null;
+  discussion: Discussion | null;
   mode: 'usage-check' | 'waiting-room' | 'discussion';
   groupId: string;
 }
@@ -134,6 +134,21 @@ export interface UserData {
 export interface AudioInputProps {
   onMessageSubmit: (message: string) => Promise<void>;
   userId: string;
-  sessionId: string;
+  discussionId: string;
   disabled?: boolean;
+}
+
+// ====== WAITING-ROOM PAGE
+
+export interface WaitingRoomProps {
+  params: {
+    discussionId: string;
+    groupId: string;
+  }
+}
+
+// Navbar
+
+export interface NavbarProps {
+  user: User | null
 }
