@@ -16,7 +16,7 @@ import { AudioInputProps } from "@/types"
 const AudioInput: React.FC<AudioInputProps> = ({
   onMessageSubmit,
   userId,
-  sessionId,
+  discussionId,
   disabled = false
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -191,7 +191,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
               })
               .eq('content', transcript)
               .eq('user_id', userId)
-              .eq('session_id', sessionId)
+              .eq('session_id', discussionId)
               .order('created_at', { ascending: false })
               .limit(1);
             
@@ -246,7 +246,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
   const uploadToSupabase = async (audioBlob: Blob, isPitched: boolean = false) => {
     try {
       const timestamp = new Date().toISOString();
-      const filename = `recordings/${sessionId}/${userId}_${timestamp}${isPitched ? '_pitched' : ''}.webm`;
+      const filename = `recordings/${discussionId}/${userId}_${timestamp}${isPitched ? '_pitched' : ''}.webm`;
       const supabase = await createClient();
       const { error } = await supabase.storage
         .from('audio-recordings')

@@ -10,12 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Trash2 } from "lucide-react"
-import { Session } from "@/types"
+import { Discussion } from "@/types"
 import { createClient } from "@/utils/supabase/client"
 
 import { DiscussionGuideProps, Answers, SharedAnswers, SharedAnswersRow, BulletPoint } from "@/types"
 
-function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
+function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   const [timeLeft, setTimeLeft] = useState(() => {
     const savedTime = localStorage.getItem('timeLeft');
     const savedTimestamp = localStorage.getItem('timerTimestamp');
@@ -25,10 +25,10 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       const remainingTime = Math.max(0, parseInt(savedTime) - elapsedTime);
       return remainingTime;
     }
-    return session?.time_left || 600;
+    return discussion?.time_left || 600;
   });
   
-  const [isRunning, setIsRunning] = useState(session?.status === 'active')
+  const [isRunning, setIsRunning] = useState(discussion?.status === 'active')
   const [loading, setLoading] = useState(true)
   const [answers] = useState<Answers>(() => {
     const savedAnswers = localStorage.getItem('discussionAnswers');
@@ -57,14 +57,14 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
 
   // Subscribe to session changes and update timer
   useEffect(() => {
-    if (!session?.id) return;
+    if (!discussion?.id) return;
   
-    const fetchCurrentSession = async () => {
+    const fetchCurrentDiscussion = async () => {
       try {
         const { data, error } = await supabase
           .from('sessions')
           .select('*')
-          .eq('id', session.id)
+          .eq('id', discussion.id)
           .maybeSingle();
   
         console.log('Session data received:', data); 
@@ -87,24 +87,24 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       }
     };
   
-    fetchCurrentSession();
+    fetchCurrentDiscussion();
 
     const channel = supabase
-      .channel(`session-${session.id}`)
+      .channel(`session-${discussion.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'sessions',
-          filter: `id=eq.${session.id}`
+          filter: `id=eq.${discussion.id}`
         },
         (payload) => {
-          const updatedSession = payload.new as Session;
+          const updatedDiscusison = payload.new as Discussion;
           if (!localStorage.getItem('timeLeft')) {
-            setTimeLeft(updatedSession.time_left || 600);
+            setTimeLeft(updatedDiscusison.time_left || 600);
           }
-          setIsRunning(updatedSession.status === 'active');
+          setIsRunning(updatedDiscusison.status === 'active');
         }
       )
       .subscribe();
@@ -112,17 +112,17 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [session?.id]);
+  }, [discussion?.id]);
 
   // Subscribe to shared answers changes
   useEffect(() => {
-    if (!session?.id || !groupId) return;
+    if (!discussion?.id || !groupId) return;
 
     const fetchSharedAnswers = async () => {
       const { data, error } = await supabase
         .from('shared_answers')
         .select('*')
-        .eq('session_id', session.id)
+        .eq('session_id', discussion.id)
         .eq('group_id', groupId)
         .maybeSingle();
 
@@ -158,7 +158,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [session?.id, groupId]);
+  }, [discussion?.id, groupId]);
 
   // Timer effect with persistence
   useEffect(() => {
@@ -204,7 +204,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
         setPointTimeLeft(prev => {
           const newTime = Math.max(0, prev - 1);
           if (newTime === 0) {
-            if (currentPointIndex < session!.discussion_points.length - 1) {
+            if (currentPointIndex < discussion!.discussion_points.length - 1) {
               const nextPointIndex = currentPointIndex + 1;
               
               (async () => {
@@ -214,7 +214,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                     .update({ 
                       current_point: nextPointIndex,
                     })
-                    .eq('id', session!.id)
+                    .eq('id', discussion!.id)
                     .select(); 
   
                   if (error) {
@@ -239,7 +239,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isRunning, mode, pointTimeLeft, currentPointIndex, session?.id]);
+  }, [isRunning, mode, pointTimeLeft, currentPointIndex, discussion?.id]);
 
   useEffect(() => {
     console.log('Current point index changed to:', currentPointIndex);
@@ -264,15 +264,12 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       const updatedAnswers = { ...sharedAnswers };
       const key = `point${pointIndex}`;
       
-      // Instead of filtering out the item, update its isDeleted flag
       if (typeof updatedAnswers[key][bulletIndex] === 'string') {
-        // If the item is a string, convert it to a BulletPoint object
         updatedAnswers[key][bulletIndex] = {
           content: updatedAnswers[key][bulletIndex],
           isDeleted: true
         };
       } else {
-        // If it's already a BulletPoint object, just update isDeleted
         updatedAnswers[key][bulletIndex] = {
           ...updatedAnswers[key][bulletIndex],
           isDeleted: true
@@ -282,7 +279,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       const { error } = await supabase
         .from('shared_answers')
         .upsert({
-          session_id: session?.id,
+          session_id: discussion?.id,
           group_id: groupId,
           answers: updatedAnswers,
           last_updated: new Date().toISOString()
@@ -329,7 +326,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
       const { error } = await supabase
         .from('shared_answers')
         .upsert({
-          session_id: session?.id,
+          session_id: discussion?.id,
           group_id: groupId,
           answers: updatedAnswers,
           last_updated: new Date().toISOString()
@@ -353,8 +350,8 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
         .from('answers')  
         .insert([
           {
-            session_id: session?.id,
-            user_id: session?.author,
+            session_id: discussion?.id,
+            user_id: discussion?.author,
             answers: answers,
             submitted_at: new Date().toISOString()
           }
@@ -391,7 +388,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
     }
   };
 
-  if (!session) {
+  if (!discussion) {
     return null;
   }
 
@@ -555,7 +552,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
 
             {/* Helper text */}
             <div className="mt-2 flex justify-between text-xs text-gray-500">
-              <span>Discussion Point {currentPointIndex + 1} of {session!.discussion_points.length}</span>
+              <span>Discussion Point {currentPointIndex + 1} of {discussion!.discussion_points.length}</span>
               {pointTimeLeft <= 30 && (
                 <span className="text-red-500 font-medium animate-pulse">
                   Wrapping up soon...
@@ -582,14 +579,14 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
           <section className="mb-8">
             <h3 className="text-lg font-semibold mb-2">Task</h3>
             <p className="text-sm text-gray-600">
-              {session.task}
+              {discussion.task}
             </p>
           </section>
 
           <section className="mb-8">
             <h3 className="text-lg font-semibold mb-2">Scenario</h3>
             <p className="text-sm text-gray-600">
-              {session.scenario}
+              {discussion.scenario}
             </p>
           </section>
 
@@ -601,7 +598,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
               onValueChange={setOpenItem}
               className="w-full"
             >
-              {session.discussion_points.map((point, index) => (
+              {discussion.discussion_points.map((point, index) => (
                 <AccordionItem 
                   key={index} 
                   value={`item-${index}`}
@@ -659,7 +656,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
 
             <ScrollArea className="pr-4 max-h-[60vh]">
               <div className="space-y-8">
-                {session.discussion_points.map((point, index) => (
+                {discussion.discussion_points.map((point, index) => (
                   <div key={index} className="space-y-4">
                     <div className="flex items-start gap-3">
                       <span className="font-semibold text-lg min-w-[24px]">{index + 1}.</span>
@@ -740,7 +737,7 @@ function DiscussionGuide({ session, mode, groupId }: DiscussionGuideProps) {
                         )}
                       </div>
                     </div>
-                    {index < session.discussion_points.length - 1 && (
+                    {index < discussion.discussion_points.length - 1 && (
                       <Separator className="my-4" />
                     )}
                   </div>

@@ -9,12 +9,12 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { createClient } from "@/utils/supabase/client"
 import { Message, ChatWindowProps } from '@/types'
-import AudioInput from '@/components/Discussion/session/AudioInput'
+import AudioInput from '@/components/Discussion/audio/AudioInput'
 import { getUserById } from '@/lib/actions/user'
 import { updateUserConsent } from '@/lib/actions/user'
 import ConsentModal from '@/components/Discussion/consent/ConsentModal'
-import { DeepgramContextProvider } from '@/components/Discussion/session/DeepgramContextProvider'
-import { useDeepgram } from './DeepgramContextProvider';
+import { DeepgramContextProvider } from '@/components/Discussion/audio/DeepgramContextProvider'
+import { useDeepgram } from '../audio/DeepgramContextProvider';
 
 import { SupabaseUser, UserData } from "@/types"
 
@@ -33,7 +33,7 @@ const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children
   return <>{children}</>;
 };
 
-function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
+function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -157,7 +157,7 @@ function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
       const { error } = await supabase
         .from('messages')
         .insert({
-          session_id: sessionId,
+          session_id: discussionId,
           group_id: groupId,
           user_id: user.id,
           username: userData.username,
@@ -301,13 +301,13 @@ function ChatWindow({ groupId, sessionId }: ChatWindowProps) {
                   className={`flex-1 ${!hasConsented ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!hasConsented}
                 />
-                {user && sessionId ? (
+                {user && discussionId ? (
                 <DeepgramContextProvider>
                   <DeepgramInitializer>
                     <AudioInput
                       onMessageSubmit={handleSendMessage}
                       userId={user.id}
-                      sessionId={sessionId}
+                      discussionId={discussionId}
                       disabled={!hasConsented}
                     />
                   </DeepgramInitializer>

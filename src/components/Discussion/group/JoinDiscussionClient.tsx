@@ -4,14 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ConsentPage from '@/components/Discussion/consent/ConsentForm';
 
-import { JoinSessionClientProps } from "@/types"
+import { JoinDiscussionClientProps } from "@/types"
 
-export default function JoinSessionClient({ sessionId }: JoinSessionClientProps) {
+export default function JoinDiscussionClient({ discussionId }: JoinDiscussionClientProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   const handleAccountCreated = () => {
-    router.push(`/session/join/${sessionId}/group`);
+    router.push(`/discussion/join/${discussionId}/group`);
   };
 
   const handleError = (error: string) => {
@@ -37,7 +37,7 @@ export default function JoinSessionClient({ sessionId }: JoinSessionClientProps)
 
   return (
     <ConsentPage
-      sessionId={sessionId}
+      discussionId={discussionId}
       onAccountCreated={handleAccountCreated}
       onError={handleError}
     />

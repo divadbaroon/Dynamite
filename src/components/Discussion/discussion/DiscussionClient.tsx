@@ -1,55 +1,55 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import ChatWindow from '@/components/Discussion/session/ChatWindow'
-import DiscussionGuide from '@/components/Discussion/session/DiscussionGuide'
-import { getSessionById } from '@/lib/actions/session'
+import ChatWindow from '@/components/Discussion/discussion/ChatWindow'
+import DiscussionGuide from '@/components/Discussion/discussion/DiscussionGuide'
+import { getDiscussionById } from '@/lib/actions/discussion'
 import { analyzeTranscript } from '@/lib/actions/transcript'
-import { Session, DiscussionClientProps } from '@/types'
+import { Discussion, DiscussionClientProps } from '@/types'
 
-function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
-    const [session, setSession] = useState<Session | null>(null)
+function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
+    const [discussion, setDiscussion] = useState<Discussion | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        const fetchSession = async () => {
+        const fetchDiscussion = async () => {
             try {
-                if (!sessionId) {
-                    setError("No session ID provided")
+                if (!discussionId) {
+                    setError("No discussion ID provided")
                     return
                 }
 
-                const response = await getSessionById(sessionId)
+                const response = await getDiscussionById(discussionId)
                 
                 if (response.error) {
                     throw response.error
                 }
 
-                if (!response.session) {
-                    setError("Session not found")
+                if (!response.discussion) {
+                    setError("Discussion not found")
                     return
                 }
 
-                setSession(response.session)
+                setDiscussion(response.discussion)
             } catch (error) {
-                console.error("Error fetching session:", error)
-                setError("Failed to load session data")
+                console.error("Error fetching discussion:", error)
+                setError("Failed to load discussion data")
             } finally {
                 setLoading(false)
             }
         }
 
-        fetchSession()
-    }, [sessionId])
+        fetchDiscussion()
+    }, [discussionId])
 
     // Transcript analysis interval using server action
     useEffect(() => {
-        if (!session?.id || !groupId) return
+        if (!discussion?.id || !groupId) return
 
         const runAnalysis = async () => {
             try {
-                const result = await analyzeTranscript(groupId, session.id)
+                const result = await analyzeTranscript(groupId, discussion.id)
                 console.log('Transcript analysis result:', result)
                 if (!result.success) {
                     console.log('Transcript analysis failed:', result.error)
@@ -66,7 +66,7 @@ function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
         const intervalId = setInterval(runAnalysis, 1 * 10 * 1000)
 
         return () => clearInterval(intervalId)
-    }, [session?.id, groupId])
+    }, [discussion?.id, groupId])
 
     if (loading) {
         return (
@@ -88,7 +88,7 @@ function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
         <div className="flex h-screen">
             <div className="flex-1 p-4 overflow-hidden">
                 <DiscussionGuide 
-                    session={session} 
+                    discussion={discussion} 
                     mode="discussion" 
                     groupId={groupId}
                 />
@@ -96,7 +96,7 @@ function DiscussionClient({ sessionId, groupId }: DiscussionClientProps) {
             <div className="flex-1 p-4 overflow-hidden">
                 <ChatWindow 
                     groupId={groupId} 
-                    sessionId={sessionId}
+                    discussionId={discussionId}
                 />
             </div>
         </div>

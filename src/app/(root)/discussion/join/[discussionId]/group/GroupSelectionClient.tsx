@@ -11,7 +11,7 @@ import { joinOrCreateGroup } from '@/lib/actions/group'
 
 import { GroupSelectionClientProps } from "@/types"
   
-export default function GroupSelectionClient({ sessionId }: GroupSelectionClientProps) {
+export default function GroupSelectionClient({ discussionId }: GroupSelectionClientProps) {
   const router = useRouter()
   const [groupNumberInput, setGroupNumberInput] = useState('')
   const [isJoining, setIsJoining] = useState(false)
@@ -25,7 +25,7 @@ export default function GroupSelectionClient({ sessionId }: GroupSelectionClient
     setIsJoining(true)
     try {
       const { group, error } = await joinOrCreateGroup(
-        sessionId,
+        discussionId,
         parseInt(groupNumberInput)
       )
 
@@ -39,7 +39,7 @@ export default function GroupSelectionClient({ sessionId }: GroupSelectionClient
 
       if (group) {
         toast.success("Successfully joined the group")
-        router.push(`/session/join/${sessionId}/${group.id}`)
+        router.push(`/discussion/join/${discussionId}/${group.id}/waiting-room`)
       }
     } catch (error) {
       console.error('Error joining group:', error)

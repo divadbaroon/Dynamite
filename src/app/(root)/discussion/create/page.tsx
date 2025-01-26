@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Upload, FileText, Eye, ArrowLeft, ArrowRight } from 'lucide-react'
 import { Progress } from "@/components/ui/progress"
-import { createSession } from '@/lib/actions/session'
+import { createDiscussion } from '@/lib/actions/discussion'
 
-export default function CreateSessionPage() {
+export default function CreateDiscussionPage() {
   const router = useRouter()
   
   // Core states
@@ -34,7 +34,7 @@ export default function CreateSessionPage() {
     setDiscussionPoints(newPoints)
   }
 
-  const handleCreateSession = async () => {
+  const handleCreateDiscussion = async () => {
     // Basic validation
     if (!title || !task || !scenario || !duration) {  
       console.error('Please fill in all required fields')
@@ -52,9 +52,9 @@ export default function CreateSessionPage() {
   
     setIsCreating(true)
     try {
-      const { error } = await createSession({
+      const { error } = await createDiscussion({
         title,
-        status: 'active',
+        status: 'draft',
         task,
         scenario,
         discussion_points: validDiscussionPoints,
@@ -63,13 +63,13 @@ export default function CreateSessionPage() {
       })
   
       if (error) {
-        console.error('Error creating session:', error)
+        console.error('Error creating discussion:', error)
         return
       }
   
-      router.push('/session/list')
+      router.push('/discussion/list')
     } catch (error) {
-      console.error('Error creating session:', error)
+      console.error('Error creating discussion:', error)
     } finally {
       setIsCreating(false)
     }
@@ -216,7 +216,7 @@ export default function CreateSessionPage() {
           </Button>
         ) : (
           <Button 
-            onClick={handleCreateSession} 
+            onClick={handleCreateDiscussion} 
             className="ml-auto"
             disabled={isCreating}
           >

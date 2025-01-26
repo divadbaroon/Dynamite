@@ -1,6 +1,6 @@
 import GroupSelectionClient from './GroupSelectionClient';
 
-type Params = Promise<{ sessionId: string }>;
+type Params = Promise<{ discussionId: string }>;
 
 export default async function GroupSelectionPage({ 
   params 
@@ -9,6 +9,6 @@ export default async function GroupSelectionPage({
 }) {
   const resolvedParams = await params;
   return (
-    <GroupSelectionClient sessionId={resolvedParams.sessionId} />
+    <GroupSelectionClient discussionId={resolvedParams.discussionId} />
   );
 }

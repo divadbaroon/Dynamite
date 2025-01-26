@@ -1,7 +1,7 @@
-import DiscussionClient from './DiscussionClient';
+import DiscussionClient from '@/components/Discussion/discussion/DiscussionClient';
 
 type Params = Promise<{ 
-  sessionId: string;
+  discussionId: string;
   groupId: string;
 }>;
 
@@ -13,7 +13,7 @@ export default async function Discussion({
   const resolvedParams = await params;
   return (
     <DiscussionClient 
-      sessionId={resolvedParams.sessionId} 
+      discussionId={resolvedParams.discussionId} 
       groupId={resolvedParams.groupId} 
     />
   );

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link, Trash2, Users, ChevronDown } from "lucide-react";
-import { getAllSessions, deleteSession } from "@/lib/actions/session";
+import { getAllDiscussions, deleteDiscussion } from "@/lib/actions/discussion";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -17,60 +17,60 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { Session } from "@/types"
+import { Discussion } from "@/types"
 
 export default function GroupDiscussions() {
   const router = useRouter();
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [discusisons, setDiscussions] = useState<Discussion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [discussionToDelete, setDiscussionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    loadSessions();
+    loadDiscusisons();
   }, []);
 
-  const loadSessions = async () => {
+  const loadDiscusisons = async () => {
     setLoading(true);
     try {
-      const { sessions, error } = await getAllSessions();
+      const { discussions, error } = await getAllDiscussions();
       if (error) throw error;
-      setSessions(sessions || []);
+      setDiscussions(discussions || []);
     } catch (error) {
-      console.error('Error loading sessions:', error);
+      console.error('Error loading discussions:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteClick = (sessionId: string) => {
-    setSessionToDelete(sessionId);
+  const handleDeleteClick = (discussionId: string) => {
+    setDiscussionToDelete(discussionId);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!sessionToDelete) return;
+    if (!discussionToDelete) return;
     
     setIsDeleting(true);
     try {
-      const { error } = await deleteSession(sessionToDelete);
+      const { error } = await deleteDiscussion(discussionToDelete);
       if (error) throw error;
       
       // Remove the session from local state
-      setSessions(sessions.filter(session => session.id !== sessionToDelete));
+      setDiscussions(discusisons.filter(discusison => discusison.id !== discussionToDelete));
     } catch (error) {
-      console.error('Error deleting session:', error);
+      console.error('Error deleting discussion:', error);
     } finally {
       setIsDeleting(false);
-      setSessionToDelete(null);
+      setDiscussionToDelete(null);
     }
   };
 
   const handleNewDiscussion = () => {
-    router.push('/session/create');
+    router.push('/discussion/create');
   };
 
-  const handleSessionClick = (sessionId: string) => {
-    router.push(`/session/${sessionId}`);
+  const handleDiscussionClick = (discussionId: string) => {
+    router.push(`/discussion/${discussionId}`);
   };  
 
   const abbreviateDescription = (description?: string | null, maxLength: number = 194) => {
@@ -84,9 +84,9 @@ export default function GroupDiscussions() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <h1 className="text-4xl font-bold mb-4">Group Discussions</h1>
+        <h1 className="text-4xl font-bold mb-4">Your Discussions</h1>
         <p className="text-lg mb-8">
-          Create, manage, and analyze dynamic group discussions to enhance instructor and student engagement and comprehension.
+          Monitor your active discussion sessions or review past ones you've created.
         </p>
         
         {/* Controls */}
@@ -111,36 +111,42 @@ export default function GroupDiscussions() {
         <div className="space-y-6">
           {loading ? (
             <div className="text-center py-8">Loading...</div>
-          ) : sessions.length > 0 ? (
-            sessions.map((session) => (
-              <Card key={session.id} className="overflow-hidden">
+          ) : discusisons.length > 0 ? (
+            discusisons.map((discussion) => (
+              <Card key={discussion.id} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex">
                     <div className="w-1/5 p-4 bg-gray-100 flex flex-col justify-center items-center">
                       <Users className="h-8 w-8 text-blue-500 mb-2" />
-                      <div className="text-lg font-bold">{session.group_count} groups</div>
-                      <div className="text-sm">{session.participant_count} participants</div>
+                      <div className="text-lg font-bold">{discussion.group_count} groups</div>
+                      <div className="text-sm">{discussion.participant_count} participants</div>
                     </div>
                     <div className="w-4/5 p-4">
                       <div className="flex justify-between items-start">
                       <div 
-                          onClick={() => handleSessionClick(session.id)}
+                          onClick={() => handleDiscussionClick(discussion.id)}
                           className="cursor-pointer group"
                         >
-                          <h3 className="text-lg font-semibold text-blue-500 group-hover:text-blue-600">
-                            {session.title}
-                            <span className="ml-2 inline-flex items-center space-x-1">
+                          <h3 className="text-lg font-semibold text-blue-500 group-hover:text-blue-600 flex items-start">
+                            {discussion.title}
+                            <span className="ml-3 mt-1.2 inline-flex items-center space-x-1">  
                               <span className={`${
-                                session.status 
+                                discussion.status === 'active'
                                   ? "bg-green-100 text-green-700" 
+                                  : discussion.status === 'completed'
+                                  ? "bg-gray-100 text-gray-700"
                                   : "bg-yellow-100 text-yellow-700"
                               } text-xs font-semibold px-2 py-1 rounded-full`}>
-                                {session.status ? "Live" : "Inactive"}
+                                {discussion.status === 'active' 
+                                  ? "Active" 
+                                  : discussion.status === 'completed'
+                                  ? "Completed"
+                                  : "Draft"}
                               </span>
                             </span>
                           </h3>
                           <p className="text-sm text-gray-600 mt-1">
-                            {abbreviateDescription(session.task)}
+                            {abbreviateDescription(discussion.task)}
                           </p>
                         </div>
                         <div className="flex space-x-2">
@@ -150,14 +156,14 @@ export default function GroupDiscussions() {
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => handleDeleteClick(session.id)}
+                            onClick={() => handleDeleteClick(discussion.id)}
                           >
                             <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
                           </Button>
                         </div>
                       </div>
                       <div className="text-right text-xs text-gray-400 mt-2">
-                        Created on {new Date(session.created_at).toLocaleString()}
+                        Created on {new Date(discussion.created_at).toLocaleString()}
                       </div>
                     </div>
                   </div>
@@ -182,7 +188,7 @@ export default function GroupDiscussions() {
       </div>
       
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!sessionToDelete} onOpenChange={() => setSessionToDelete(null)}>
+      <AlertDialog open={!!discussionToDelete} onOpenChange={() => setDiscussionToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
