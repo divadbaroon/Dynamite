@@ -12,7 +12,7 @@ import { Message, ChatWindowProps } from '@/types'
 import AudioInput from '@/components/Discussion/Audio/AudioInput'
 import { getUserById } from '@/lib/actions/user'
 import { updateUserConsent } from '@/lib/actions/user'
-import ConsentModal from '@/components/Discussion/Consent/ConsentModal'
+import ConsentModal from '@/components/Discussion/consent/ConsentModal'
 import { DeepgramContextProvider } from '@/components/Discussion/Audio/DeepgramContextProvider'
 import { useDeepgram } from '@/components/Discussion/Audio/DeepgramContextProvider';
 
