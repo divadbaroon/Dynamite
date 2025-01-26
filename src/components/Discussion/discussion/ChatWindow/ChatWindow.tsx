@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"  
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,17 +54,17 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
       }
       setUser(currentUser)
     }
-
+  
     getUser()
-
+  
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
-
+  
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase.auth]) 
 
   useEffect(() => {
     const checkUserConsent = async () => {
@@ -129,7 +129,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
     return () => {
       channel.unsubscribe()
     }
-  }, [groupId, user])
+  }, [groupId, user, supabase])
 
   const handleConsent = async (hasConsented: boolean) => {
     if (!user) return
@@ -150,9 +150,9 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
     }
   }
 
-  const handleSendMessage = async (messageContent: string) => {
+  const handleSendMessage = useCallback(async (messageContent: string) => {
     if (!user || !messageContent.trim() || !hasConsented || !userData) return
-
+  
     try {
       const { error } = await supabase
         .from('messages')
@@ -164,15 +164,15 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
           content: messageContent.trim(),
           audio_url: null
         })
-
+  
       if (error) throw error
-
+  
       setNewMessage("")
     } catch (error) {
       console.error('Error sending message:', error)
       toast.error("Failed to send message")
     }
-  }
+  }, [user, hasConsented, userData, discussionId, groupId, supabase]) 
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()

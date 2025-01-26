@@ -112,7 +112,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [discussion?.id]);
+  }, [discussion?.id, supabase]);
 
   // Subscribe to shared answers changes
   useEffect(() => {
@@ -158,7 +158,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [discussion?.id, groupId]);
+  }, [discussion?.id, groupId, supabase]);
 
   // Timer effect with persistence
   useEffect(() => {
@@ -191,7 +191,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         clearInterval(timer);
       }
     };
-  }, [isRunning, mode, timeLeft, isSubmitted]);
+  }, [isRunning, mode, timeLeft, isSubmitted, supabase]);
 
   // Timer effect for individual discussion points
   useEffect(() => {

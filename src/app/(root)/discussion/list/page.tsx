@@ -86,7 +86,7 @@ export default function GroupDiscussions() {
         {/* Header */}
         <h1 className="text-4xl font-bold mb-4">Your Discussions</h1>
         <p className="text-lg mb-8">
-          Monitor your active discussion sessions or review past ones you've created.
+          Monitor your active discussion sessions or review past ones you`&apos;`ve created.
         </p>
         
         {/* Controls */}

@@ -1,7 +1,6 @@
-// app/join/[discussionId]/[groupId]/waiting-room/WaitingRoomClient.tsx
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DiscussionGuide from '@/components/Discussion/Discussion/DiscussionGuide/DiscussionGuide';
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -22,7 +21,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
   const [isTransitioning, setIsTransitioning] = useState(false);
   const router = useRouter();
 
-  const checkDiscussionStatus = async () => {
+  const checkDiscussionStatus = useCallback(async () => {
     if (!discussionId || isTransitioning) return;
 
     try {
@@ -44,7 +43,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
       console.error("Error checking discussion status:", error);
       setError("Failed to load discussion data");
     }
-  };
+  }, [discussionId, groupId, isTransitioning, router]); // Add dependencies used in the function
 
   useEffect(() => {
     if (!discussionId) {
@@ -62,7 +61,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
-  }, [discussionId, groupId]);
+  }, [discussionId, groupId, checkDiscussionStatus]);
 
   if (loading) {
     return (
