@@ -1,4 +1,4 @@
-import DiscussionClient from '@/components/Discussion/Discussion/DiscussionClient';
+import DiscussionClient from '@/components/Discussion/DiscussionClient';
 
 type Params = Promise<{ 
   discussionId: string;
