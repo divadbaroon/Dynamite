@@ -9,7 +9,7 @@ import {
   LiveTranscriptionEvent,
   LiveTranscriptionEvents,
   useDeepgram,
-} from './DeepgramContextProvider';
+} from '@/components/Discussion/Audio/DeepgramContextProvider';
 
 import { AudioInputProps } from "@/types"
 

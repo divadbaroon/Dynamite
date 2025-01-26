@@ -13,8 +13,8 @@ import AudioInput from '@/components/Discussion/Audio/AudioInput'
 import { getUserById } from '@/lib/actions/user'
 import { updateUserConsent } from '@/lib/actions/user'
 import ConsentModal from '@/components/Discussion/Consent/ConsentModal'
-import { DeepgramContextProvider } from '@/components/Discussion/audio/DeepgramContextProvider'
-import { useDeepgram } from '../../audio/DeepgramContextProvider';
+import { DeepgramContextProvider } from '@/components/Discussion/Audio/DeepgramContextProvider'
+import { useDeepgram } from '@/components/Discussion/Audio/DeepgramContextProvider';
 
 import { SupabaseUser, UserData } from "@/types"
 
