@@ -2,11 +2,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
-import { SharedAnswers } from "@/types"
+import { SharedAnswers, Discussion } from "@/types"
 import { PointTimerDisplay } from './PointTimerDisplay';
 
 interface DiscussionPointsProps {
-  discussion: any;
+  discussion: Discussion;
   mode: string;
   currentPointIndex: number;
   openItem: string | undefined;

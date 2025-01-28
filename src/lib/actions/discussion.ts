@@ -208,12 +208,16 @@ export async function saveAnswerEdit(
   }
 }
 
+interface SubmitAnswersResponse {
+  error: Error | null;
+}
+
 export async function submitAnswers(
   discussionId: string,
   userId: string,
-  answers: any
-) {
-  const supabase = await createClient()
+  answers: SharedAnswers
+): Promise<SubmitAnswersResponse> {
+  const supabase = await createClient();
   
   try {
     const { error } = await supabase
@@ -224,14 +228,14 @@ export async function submitAnswers(
         answers: answers,
         submitted_at: new Date().toISOString()
       }])
-      .select()
+      .select();
 
-    if (error) throw error
+    if (error) throw error;
     
-    return { error: null }
+    return { error: null };
   } catch (error) {
-    console.log('Error submitting answers:', error)
-    return { error }
+    console.log('Error submitting answers:', error);
+    return { error: error as Error };
   }
 }
 

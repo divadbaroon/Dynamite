@@ -347,7 +347,13 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     }
   
     try {
-      const { error } = await submitAnswers(discussion.id, discussion.author, answers);
+      // Transform answers to SharedAnswers format
+      const transformedAnswers: SharedAnswers = Object.entries(answers).reduce((acc, [key, value]) => {
+        acc[key] = [{ content: value, isDeleted: false }];
+        return acc;
+      }, {} as SharedAnswers);
+  
+      const { error } = await submitAnswers(discussion.id, discussion.author, transformedAnswers);
   
       if (error) throw error;
   
@@ -366,7 +372,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         {
           loading: 'Submitting your answers...',
           success: () => {
-              window.location.href = '/feedback';
+            window.location.href = '/feedback';
             return 'Answers submitted successfully! You will be redirected to the feedback page shortly.';
           },
           error: 'Failed to submit answers',

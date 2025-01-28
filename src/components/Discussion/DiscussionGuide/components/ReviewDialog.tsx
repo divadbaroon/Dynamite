@@ -5,13 +5,13 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Trash2, Check } from "lucide-react"
-import { BulletPoint, SharedAnswers } from "@/types"
+import { BulletPoint, SharedAnswers, Discussion } from "@/types"
 
 interface ReviewDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   isTimeUp: boolean;
-  discussion: any;
+  discussion: Discussion;
   sharedAnswers: SharedAnswers;
   editingPoint: { index: number; bulletIndex: number; } | null;
   setEditingPoint: (point: { index: number; bulletIndex: number; } | null) => void;
