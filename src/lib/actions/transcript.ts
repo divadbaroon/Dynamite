@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import OpenAI from 'openai'
-import { SharedAnswers, BulletPoint } from '@/types'
+import { SharedAnswers } from '@/types'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY

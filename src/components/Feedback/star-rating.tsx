@@ -8,7 +8,7 @@ interface StarRatingProps {
   onChange: (rating: number) => void
 }
 
-export function StarRating({ name, onChange }: StarRatingProps) {
+export function StarRating({ onChange }: StarRatingProps) {
   const [rating, setRating] = useState(0)
   const [hover, setHover] = useState(0)
 

@@ -10,7 +10,7 @@ import { Timer } from "./components/Timer"
 import { ReviewDialog } from "./components/ReviewDialog"
 import { DiscussionPoints } from "./components/DiscussionPoints"
 import { HeaderContent } from "./components/HeaderContent"
-import { DiscussionGuideProps, Answers, SharedAnswers } from "@/types"
+import { DiscussionGuideProps, Answers, SharedAnswers, BulletPoint } from "@/types"
 
 import { 
   getDiscussionById,
@@ -53,6 +53,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null);
   const [editedContent, setEditedContent] = useState("");
   const [deletedItems, setDeletedItems] = useState<{[key: string]: boolean[]}>({});
+  console.log(deletedItems)
 
   const [currentPointIndex, setCurrentPointIndex] = useState(0);
 
@@ -318,7 +319,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       const key = `point${pointIndex}`;
       
       if (typeof updatedAnswers[key][bulletIndex] === 'string') {
-        updatedAnswers[key] = updatedAnswers[key].map((content: string | any) => 
+        updatedAnswers[key] = updatedAnswers[key].map((content): BulletPoint => 
           typeof content === 'string' ? { content, isDeleted: false } : content
         );
       }
