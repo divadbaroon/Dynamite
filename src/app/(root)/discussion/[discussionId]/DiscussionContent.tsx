@@ -40,7 +40,7 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
 
         setDiscussionData(discussion)
       } catch (error) {
-        console.error("Error loading discussion:", error)
+        console.log("Error loading discussion:", error)
         setError("Failed to load discussion data")
       } finally {
         setLoading(false)
@@ -53,7 +53,7 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
   async function generateInviteLink() {
     const { link, error } = await generateDiscussionInviteLink(discussionId)
     if (error) {
-      console.error(error)
+      console.log(error)
       return
     }
     setInviteLink(link)
@@ -66,7 +66,7 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       } catch (err) {
-        console.error("Failed to copy:", err)
+        console.log("Failed to copy:", err)
       }
     }
   }
@@ -79,7 +79,7 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
       setDiscussionData(discussion)
       setIsDialogOpen(false)
     } catch (error) {
-      console.error('Error launching discussion:', error)
+      console.log('Error launching discussion:', error)
     }
   }
   
@@ -91,7 +91,7 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
       setDiscussionData(discussion)
       setIsDialogOpen(false)
     } catch (error) {
-      console.error('Error ending discussion:', error)
+      console.log('Error ending discussion:', error)
     }
   }
 
