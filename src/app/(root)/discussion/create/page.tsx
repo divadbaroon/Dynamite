@@ -37,14 +37,14 @@ export default function CreateDiscussionPage() {
   const handleCreateDiscussion = async () => {
     // Basic validation
     if (!title || !task || !scenario || !duration) {  
-      console.error('Please fill in all required fields')
+      console.log('Please fill in all required fields')
       return
     }
   
     // Filter out empty discussion points
     const validDiscussionPoints = discussionPoints.filter(point => point.trim() !== '')
     if (validDiscussionPoints.length === 0) {
-      console.error('Please add at least one discussion point')
+      console.log('Please add at least one discussion point')
       return
     }
 
@@ -63,13 +63,13 @@ export default function CreateDiscussionPage() {
       })
   
       if (error) {
-        console.error('Error creating discussion:', error)
+        console.log('Error creating discussion:', error)
         return
       }
   
       router.push('/discussion/list')
     } catch (error) {
-      console.error('Error creating discussion:', error)
+      console.log('Error creating discussion:', error)
     } finally {
       setIsCreating(false)
     }
