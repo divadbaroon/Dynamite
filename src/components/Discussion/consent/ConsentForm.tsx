@@ -31,7 +31,7 @@ export default function ConsentPage({
   
       onAccountCreated()
     } catch (err) {
-      console.error('Sign up error:', err)
+      console.log('Sign up error:', err)
       onError('Failed to create anonymous session. Please try again.')
     } finally {
       setIsProcessing(false)

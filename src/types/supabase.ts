@@ -95,6 +95,7 @@ export type Database = {
           session_id: string | null
           user_id: string | null
           username: string
+          current_point: number
         }
         Insert: {
           audio_url?: string | null

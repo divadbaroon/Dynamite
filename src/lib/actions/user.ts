@@ -62,7 +62,7 @@ export async function createAnonymousUser(sessionId: string, consentStatus: bool
 
     return { user, error: null }
   } catch (error) {
-    console.error('Error creating anonymous user:', error)
+    console.log('Error creating anonymous user:', error)
     return { user: null, error }
   }
 }
@@ -86,7 +86,7 @@ export async function updateUserConsent({
 
     return { error: null }
   } catch (error) {
-    console.error('Error updating user consent:', error)
+    console.log('Error updating user consent:', error)
     return { error }
   }
 }
@@ -107,7 +107,7 @@ export async function getUserById(userId: string) {
 
     return data as UserData
   } catch (error) {
-    console.error('Error getting user by Id:', error)
+    console.log('Error getting user by Id:', error)
     return null
   }
 }

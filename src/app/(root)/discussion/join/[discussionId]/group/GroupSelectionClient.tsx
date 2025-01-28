@@ -42,7 +42,7 @@ export default function GroupSelectionClient({ discussionId }: GroupSelectionCli
         router.push(`/discussion/join/${discussionId}/${group.id}/waiting-room`)
       }
     } catch (error) {
-      console.error('Error joining group:', error)
+      console.log('Error joining group:', error)
       toast.error("Failed to join group. Please try again.")
     } finally {
       setIsJoining(false)

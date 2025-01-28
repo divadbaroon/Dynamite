@@ -60,7 +60,7 @@ export async function joinOrCreateGroup(sessionId: string, groupNumber: number):
     if (createError) throw createError
     return { group: newGroup, error: null }
   } catch (error) {
-    console.error('Error in joinOrCreateGroup:', error)
+    console.log('Error in joinOrCreateGroup:', error)
     return { group: null, error: error as Error }
   }
 }
@@ -100,7 +100,7 @@ export async function leaveGroup(groupId: string) {
     if (updateError) throw updateError
     return { error: null }
   } catch (error) {
-    console.error('Error leaving group:', error)
+    console.log('Error leaving group:', error)
     return { error }
   }
 }
@@ -121,7 +121,7 @@ export async function getGroupById(groupId: string) {
 
     return { group, error: null }
   } catch (error) {
-    console.error('Error fetching group:', error)
+    console.log('Error fetching group:', error)
     return { group: null, error }
   }
 }    

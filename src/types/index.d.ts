@@ -152,3 +152,17 @@ export interface WaitingRoomProps {
 export interface NavbarProps {
   user: User | null
 }
+
+// REAL TIME
+
+export interface UseRealtimeDiscussionProps {
+  groupId: string
+  sessionId: string
+}
+
+export interface RealtimeState {
+  messages: any[]
+  sharedAnswers: SharedAnswers | null
+  currentPoint: number
+  lastAnalysis: Date | null
+}

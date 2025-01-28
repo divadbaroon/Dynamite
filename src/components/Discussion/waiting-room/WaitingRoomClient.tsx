@@ -40,7 +40,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
         router.replace(`/discussion/join/${discussionId}/${groupId}`);
       }
     } catch (error) {
-      console.error("Error checking discussion status:", error);
+      console.log("Error checking discussion status:", error);
       setError("Failed to load discussion data");
     }
   }, [discussionId, groupId, isTransitioning, router]); // Add dependencies used in the function

@@ -14,7 +14,7 @@ export async function generateDiscussionInviteLink(discussionId: string) {
     // Extract the short URL from the response
     return { link: response.shortLink, error: null };
   } catch (error) {
-    console.error('Error generating invite link:', error);
+    console.log('Error generating invite link:', error);
     return { link: null, error: 'Failed to generate invite link' };
   }
 }

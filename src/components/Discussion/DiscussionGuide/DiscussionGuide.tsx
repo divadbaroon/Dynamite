@@ -1,24 +1,31 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
-import { Trash2 } from "lucide-react"
 import { Discussion } from "@/types"
 import { createClient } from "@/utils/supabase/client"
+import { Timer } from "./components/Timer"
+import { ReviewDialog } from "./components/ReviewDialog"
+import { DiscussionPoints } from "./components/DiscussionPoints"
+import { HeaderContent } from "./components/HeaderContent"
+import { DiscussionGuideProps, Answers, SharedAnswers } from "@/types"
 
-import { DiscussionGuideProps, Answers, SharedAnswers, SharedAnswersRow, BulletPoint } from "@/types"
+import { 
+  getDiscussionById,
+  fetchSharedAnswers,
+  deleteAnswerPoint,
+  saveAnswerEdit,
+  submitAnswers,
+  updateCurrentPoint
+} from '@/lib/actions/discussion'
 
 function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
+  // State declarations remain the same
   const [timeLeft, setTimeLeft] = useState(() => {
-    const savedTime = localStorage.getItem('timeLeft');
-    const savedTimestamp = localStorage.getItem('timerTimestamp');
+    const savedTime = localStorage.getItem(`${discussion?.id}-timeLeft`);
+    const savedTimestamp = localStorage.getItem(`${discussion?.id}-timerTimestamp`);
     
     if (savedTime && savedTimestamp) {
       const elapsedTime = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
@@ -31,18 +38,16 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   const [isRunning, setIsRunning] = useState(discussion?.status === 'active')
   const [loading, setLoading] = useState(true)
   const [answers] = useState<Answers>(() => {
-    const savedAnswers = localStorage.getItem('discussionAnswers');
+    const savedAnswers = localStorage.getItem(`${discussion?.id}-discussionAnswers`);
     return savedAnswers ? JSON.parse(savedAnswers) : {};
   });
   const [sharedAnswers, setSharedAnswers] = useState<SharedAnswers>({});
   const [isReviewOpen, setIsReviewOpen] = useState(false)
+
   const [isTimeUp, setIsTimeUp] = useState(() => {
-    const timeUpState = localStorage.getItem('isTimeUp') === 'true';
-    if (timeUpState) {
-      setTimeout(() => setIsReviewOpen(true), 0);
-    }
-    return timeUpState;
+    return localStorage.getItem(`${discussion?.id}-isTimeUp`) === 'true';
   });
+  
   const [isSubmitted, setIsSubmitted] = useState(false)
 
   const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null);
@@ -50,34 +55,76 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   const [deletedItems, setDeletedItems] = useState<{[key: string]: boolean[]}>({});
 
   const [currentPointIndex, setCurrentPointIndex] = useState(0);
-  const [pointTimeLeft, setPointTimeLeft] = useState(180); // 3 minutes in seconds
+
+  const [pointTimeLeft, setPointTimeLeft] = useState(() => {
+    const savedPointTime = localStorage.getItem(`${discussion?.id}-pointTimeLeft`);
+    const savedPointTimestamp = localStorage.getItem(`${discussion?.id}-pointTimerTimestamp`);
+    
+    if (savedPointTime && savedPointTimestamp) {
+      const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
+      const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
+      
+      // If the timer ran out, set to zero
+      if (remainingTime === 0) {
+        localStorage.removeItem(`${discussion?.id}-pointTimeLeft`);
+        localStorage.removeItem(`${discussion?.id}-pointTimerTimestamp`);
+        return 0;
+      }
+      
+      return remainingTime;
+    }
+    
+    // Calculate point time based on total time and number of points
+    const totalTimeInSeconds = discussion?.time_left || 600; // 10 minutes default
+    const numberOfPoints = discussion?.discussion_points?.length || 1;
+    return Math.floor(totalTimeInSeconds / numberOfPoints);
+  });
+  
+
   const [openItem, setOpenItem] = useState<string | undefined>(`item-${currentPointIndex}`);
 
   const supabase = createClient();
 
-  // Subscribe to session changes and update timer
+  useEffect(() => {
+    if (isTimeUp) {
+      setIsReviewOpen(true);
+    }
+  }, [isTimeUp]);
+
+  // Fetch current discussion effect
   useEffect(() => {
     if (!discussion?.id) return;
   
-    const fetchCurrentDiscussion = async () => {
+    const getCurrentDiscussion = async () => {
       try {
-        const { data, error } = await supabase
-          .from('sessions')
-          .select('*')
-          .eq('id', discussion.id)
-          .maybeSingle();
-  
-        console.log('Session data received:', data); 
-  
+        const { discussion: currentDiscussion, error } = await getDiscussionById(discussion.id);
         if (error) throw error;
-        if (data) {
-          if (!localStorage.getItem('timeLeft')) {
-            setTimeLeft(data.time_left || 600);
+  
+        if (currentDiscussion) {
+          // For the main timer
+          if (!localStorage.getItem(`${discussion?.id}-timeLeft`)) {
+            setTimeLeft(currentDiscussion.time_left || 600);
           }
-          setIsRunning(data.status === 'active');
-          // Set current point from session data
-          if (data.current_point !== undefined) {
-            setCurrentPointIndex(data.current_point);
+          setIsRunning(currentDiscussion.status === 'active');
+  
+          // For the point timer - check both localStorage and server state
+          if (currentDiscussion.current_point !== undefined) {
+            setCurrentPointIndex(currentDiscussion.current_point);
+            
+            // If we have saved point time, use it
+            const savedPointTime = localStorage.getItem(`${discussion?.id}-pointTimeLeft`);
+            const savedPointTimestamp = localStorage.getItem(`${discussion?.id}-pointTimerTimestamp`);
+            
+            if (savedPointTime && savedPointTimestamp) {
+              const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
+              const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
+              setPointTimeLeft(remainingTime);
+            } else {
+              // If no saved time, start fresh at 180
+              setPointTimeLeft(180);
+              localStorage.setItem(`${discussion?.id}-pointTimeLeft`, '180');
+              localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
+            }
           }
         }
       } catch (error) {
@@ -87,8 +134,9 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       }
     };
   
-    fetchCurrentDiscussion();
-
+    getCurrentDiscussion();
+  
+    // Keep realtime subscription
     const channel = supabase
       .channel(`session-${discussion.id}`)
       .on(
@@ -101,31 +149,26 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         },
         (payload) => {
           const updatedDiscusison = payload.new as Discussion;
-          if (!localStorage.getItem('timeLeft')) {
+          if (!localStorage.getItem(`${discussion?.id}-timeLeft`)) {
             setTimeLeft(updatedDiscusison.time_left || 600);
           }
           setIsRunning(updatedDiscusison.status === 'active');
         }
       )
       .subscribe();
-
+  
     return () => {
       channel.unsubscribe();
     };
-  }, [discussion?.id, supabase]);
+  }, [discussion?.id]);
 
-  // Subscribe to shared answers changes
+  // Fetch shared answers effect
   useEffect(() => {
     if (!discussion?.id || !groupId) return;
 
-    const fetchSharedAnswers = async () => {
-      const { data, error } = await supabase
-        .from('shared_answers')
-        .select('*')
-        .eq('session_id', discussion.id)
-        .eq('group_id', groupId)
-        .maybeSingle();
-
+    const getSharedAnswers = async () => {
+      const { data, error } = await fetchSharedAnswers(discussion.id, groupId);
+      
       if (error) {
         console.error('Error fetching shared answers:', error);
       }
@@ -134,8 +177,9 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       }
     };
 
-    fetchSharedAnswers();
+    getSharedAnswers();
 
+    // Keep realtime subscription
     const channel = supabase
       .channel(`shared-answers-${groupId}`)
       .on(
@@ -147,7 +191,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
           filter: `group_id=eq.${groupId}`
         },
         (payload) => {
-          const newAnswers = (payload.new as SharedAnswersRow)?.answers;
+          const newAnswers = (payload.new as any)?.answers;
           if (newAnswers && typeof newAnswers === 'object') {
             setSharedAnswers(newAnswers);
           }
@@ -158,96 +202,16 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [discussion?.id, groupId, supabase]);
+  }, [discussion?.id, groupId]);
 
-  // Timer effect with persistence
+  // Save answers to localStorage effect
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    if (isRunning && timeLeft > 0 && mode === 'discussion') {
-      console.log('Starting timer...');
-      localStorage.setItem('timeLeft', timeLeft.toString());
-      localStorage.setItem('timerTimestamp', Date.now().toString());
-      
-      timer = setInterval(() => {
-        setTimeLeft((prevTime: number) => {
-          const newTime = Math.max(0, prevTime - 1);
-          
-          localStorage.setItem('timeLeft', newTime.toString());
-          localStorage.setItem('timerTimestamp', Date.now().toString());
-          
-          if (newTime === 0) {
-            setIsTimeUp(true);
-            localStorage.setItem('isTimeUp', 'true');
-            setIsReviewOpen(true);
-          }
-          return newTime;
-        });
-      }, 1000);
-    }
-  
-    return () => {
-      if (timer) {
-        clearInterval(timer);
-      }
-    };
-  }, [isRunning, mode, timeLeft, isSubmitted, supabase]);
-
-  // Timer effect for individual discussion points
-  useEffect(() => {
-    if (!isRunning || mode !== 'discussion') return;
-  
-    let timer: NodeJS.Timeout;
-    
-    if (pointTimeLeft > 0) {
-      timer = setInterval(async () => {
-        setPointTimeLeft(prev => {
-          const newTime = Math.max(0, prev - 1);
-          if (newTime === 0) {
-            if (currentPointIndex < discussion!.discussion_points.length - 1) {
-              const nextPointIndex = currentPointIndex + 1;
-              
-              (async () => {
-                try {
-                  const { data, error } = await supabase 
-                    .from('sessions')
-                    .update({ 
-                      current_point: nextPointIndex,
-                    })
-                    .eq('id', discussion!.id)
-                    .select(); 
-  
-                  if (error) {
-                    console.error('Error updating current point:', error);
-                  } else {
-                    console.log('Update response:', data);
-                    setCurrentPointIndex(nextPointIndex);
-                    setOpenItem(`item-${nextPointIndex}`);
-                    setPointTimeLeft(180);
-                  }
-                } catch (error) {
-                  console.error('Error in update operation:', error);
-                }
-              })();
-            }
-          }
-          return newTime;
-        });
-      }, 1000);
-    }
-  
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isRunning, mode, pointTimeLeft, currentPointIndex, discussion?.id]);
-
-  useEffect(() => {
-    console.log('Current point index changed to:', currentPointIndex);
-  }, [currentPointIndex]);
-
-  useEffect(() => {
-    localStorage.setItem('discussionAnswers', JSON.stringify(answers));
+    localStorage.setItem(`${discussion?.id}-discussionAnswers`, JSON.stringify(answers));
   }, [answers]);
+
+  useEffect(() => {
+    setOpenItem(`item-${currentPointIndex}`);
+  }, [currentPointIndex]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -260,6 +224,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   }
 
   const handleDelete = async (pointIndex: number, bulletIndex: number) => {
+    if (!discussion?.id || !groupId) {
+      toast.error("Missing discussion or group information");
+      return;
+    }
     try {
       const updatedAnswers = { ...sharedAnswers };
       const key = `point${pointIndex}`;
@@ -276,20 +244,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         };
       }
   
-      const { error } = await supabase
-        .from('shared_answers')
-        .upsert({
-          session_id: discussion?.id,
-          group_id: groupId,
-          answers: updatedAnswers,
-          last_updated: new Date().toISOString()
-        }, {
-          onConflict: 'session_id,group_id' 
-        });
+      const { error } = await deleteAnswerPoint(discussion.id, groupId, pointIndex, bulletIndex, updatedAnswers);
   
       if (error) throw error;
       
-      // Update deleted items state for UI
       setDeletedItems(prev => ({
         ...prev,
         [`point${pointIndex}`]: [
@@ -305,34 +263,72 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     }
   };
 
+  useEffect(() => {
+    if (!isRunning || mode !== 'discussion' || !discussion?.id) return;
+  
+    localStorage.setItem(`${discussion?.id}-pointTimeLeft`, pointTimeLeft.toString());
+    localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
+  
+    const timer = setInterval(async () => {
+      // First, update the time
+      setPointTimeLeft(prev => Math.max(0, prev - 1));
+  
+      // Then, check if we need to move to the next point
+      if (pointTimeLeft === 1) { // Check at 1 instead of 0 to avoid race condition
+        if (currentPointIndex < discussion.discussion_points.length - 1) {
+          const nextPointIndex = currentPointIndex + 1;
+          
+          try {
+            const { error } = await updateCurrentPoint(discussion.id, nextPointIndex);
+            if (!error) {
+              // Calculate point time based on total time and number of points
+              const totalTimeInSeconds = timeLeft; // Use remaining total time
+              const remainingPoints = discussion.discussion_points.length - nextPointIndex;
+              const newPointTime = Math.floor(totalTimeInSeconds / remainingPoints);
+              
+              // Update these in a separate effect trigger
+              setTimeout(() => {
+                setCurrentPointIndex(nextPointIndex);
+                setOpenItem(`item-${nextPointIndex}`);
+                setPointTimeLeft(newPointTime);
+                localStorage.setItem(`${discussion?.id}-pointTimeLeft`, newPointTime.toString());
+                localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
+              }, 0);
+            } else {
+              console.error('Error updating current point:', error);
+            }
+          } catch (error) {
+            console.error('Error in update operation:', error);
+          }
+        }
+      }
+    }, 1000);
+  
+    return () => clearInterval(timer);
+  }, [isRunning, mode, pointTimeLeft, currentPointIndex, discussion?.id, discussion?.discussion_points.length, timeLeft]);
+
   const handleSaveEdit = async (pointIndex: number, bulletIndex: number, newContent: string) => {
+    if (!discussion?.id || !groupId) {
+      toast.error("Missing discussion or group information");
+      return;
+    }
+
     try {
       const updatedAnswers = { ...sharedAnswers };
       const key = `point${pointIndex}`;
       
-      // Convert to BulletPoint array if needed
       if (typeof updatedAnswers[key][bulletIndex] === 'string') {
-        updatedAnswers[key] = updatedAnswers[key].map((content: string | BulletPoint) => 
+        updatedAnswers[key] = updatedAnswers[key].map((content: string | any) => 
           typeof content === 'string' ? { content, isDeleted: false } : content
         );
       }
       
-      // Update the content while preserving isDeleted status
       updatedAnswers[key][bulletIndex] = {
         ...updatedAnswers[key][bulletIndex],
         content: newContent,
       };
   
-      const { error } = await supabase
-        .from('shared_answers')
-        .upsert({
-          session_id: discussion?.id,
-          group_id: groupId,
-          answers: updatedAnswers,
-          last_updated: new Date().toISOString()
-        }, {
-          onConflict: 'session_id,group_id' 
-        });
+      const { error } = await saveAnswerEdit(discussion.id, groupId, updatedAnswers);
   
       if (error) throw error;
       setEditingPoint(null);
@@ -344,40 +340,33 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   };
 
   const handleSubmit = async () => {
+    if (!discussion?.id || !discussion?.author || !groupId) {
+      toast.error("Missing discussion or group information");
+      return;
+    }
+  
     try {
-      // Save answers to Supabase
-      const { error } = await supabase
-        .from('answers')  
-        .insert([
-          {
-            session_id: discussion?.id,
-            user_id: discussion?.author,
-            answers: answers,
-            submitted_at: new Date().toISOString()
-          }
-        ])
-        .select();
+      const { error } = await submitAnswers(discussion.id, discussion.author, answers);
   
       if (error) throw error;
   
-      // Clear localStorage after successful submission
-      localStorage.removeItem('timeLeft');
-      localStorage.removeItem('timerTimestamp');
-      localStorage.removeItem('isTimeUp');
-      localStorage.removeItem('discussionAnswers');
+      localStorage.removeItem(`${discussion?.id}-timeLeft`);
+      localStorage.removeItem(`${discussion?.id}-timerTimestamp`);
+      localStorage.removeItem(`${discussion?.id}-isTimeUp`);
+      localStorage.removeItem(`${discussion?.id}-discussionAnswers`);
+      localStorage.removeItem(`${discussion?.id}-pointTimeLeft`);        
+      localStorage.removeItem(`${discussion?.id}-pointTimerTimestamp`);  
       
       setIsSubmitted(true);
       setIsReviewOpen(false);
       
       await toast.promise(
-        new Promise((resolve) => setTimeout(resolve, 3000)),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
         {
           loading: 'Submitting your answers...',
           success: () => {
-            setTimeout(() => {
-              window.location.href = '/';
-            }, 2000);
-            return 'Answers submitted successfully! You will be exited from the conversation shortly.';
+              window.location.href = '/feedback';
+            return 'Answers submitted successfully! You will be redirected to the feedback page shortly.';
           },
           error: 'Failed to submit answers',
         }
@@ -388,6 +377,34 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     }
   };
 
+  const handleUndo = async (pointIndex: number, bulletIndex: number) => {
+    if (!discussion?.id || !groupId) {
+      toast.error("Missing discussion or group information");
+      return;
+    }
+  
+    try {
+      const updatedAnswers = { ...sharedAnswers };
+      const key = `point${pointIndex}`;
+      
+      if (typeof updatedAnswers[key][bulletIndex] === 'object') {
+        updatedAnswers[key][bulletIndex] = {
+          ...updatedAnswers[key][bulletIndex],
+          isDeleted: false
+        };
+      }
+  
+      const { error } = await saveAnswerEdit(discussion.id, groupId, updatedAnswers);
+  
+      if (error) throw error;
+      toast.success('Bullet point restored');
+    } catch (error) {
+      console.error('Error restoring bullet point:', error);
+      toast.error('Failed to restore bullet point');
+    }
+  };
+
+  // Rendering logic remains the same
   if (!discussion) {
     return null;
   }
@@ -411,224 +428,41 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     );
   }
 
-  const getTimerColor = (timeLeft: number) => {
-    if (timeLeft > 120) return 'bg-green-500'; // First minute - green
-    if (timeLeft > 60) return 'bg-yellow-500';  // Second minute - yellow
-    return 'bg-red-500'; // Last minute - red
-  };
-
-  const renderAccordionContent = (point: string, index: number) => {
-    if (mode === 'waiting-room') return null;
-    if (mode === 'usage-check') {
-      return (
-        <div className="text-sm text-gray-600">
-          This section will be available during the discussion.
-        </div>
-      );
-    }
-  
-    const bulletPoints = sharedAnswers[`point${index}`] || [];
-    const isCurrentPoint = index === currentPointIndex;
-  
-    return (
-      <div className="space-y-4">
-        {/* Bullet points section */}
-        {bulletPoints.length > 0 ? (
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            {bulletPoints
-              .map((point, originalIndex) => ({ point, originalIndex }))
-              .filter(({ point }) => {
-                if (typeof point === 'string') return true;
-                return !point.isDeleted;
-              })
-              .map(({ point, originalIndex: i }) => (
-                <div key={i} className="flex items-start gap-2 group">
-                  <span className="text-gray-500 pt-1.5 -mt-1.5">•</span>
-                  {editingPoint?.index === index && editingPoint?.bulletIndex === i ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <Input
-                        className="flex-1"
-                        value={editedContent}
-                        onChange={(e) => setEditedContent(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSaveEdit(index, i, editedContent);
-                          } else if (e.key === 'Escape') {
-                            setEditingPoint(null);
-                          }
-                        }}
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveEdit(index, i, editedContent)}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditingPoint(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-start justify-between group">
-                      <p className="text-sm text-gray-600">
-                        {typeof point === 'string' ? point : point.content}
-                      </p>
-                      {isCurrentPoint && (
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingPoint({ index, bulletIndex: i });
-                              setEditedContent(typeof point === 'string' ? point : point.content);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDelete(index, i)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        ) : (
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <div className="flex flex-col items-center space-y-4">
-              {/* Main text */}
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium text-gray-900">
-                  AI Analysis in Progress
-                </p>
-                <p className="text-sm text-gray-600">
-                  Your discussion is being analyzed in real-time.
-                  Key points will appear here automatically as they`&apos;`re identified.
-                </p>
-              </div>
-
-              {/* Loading indicator */}
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Timer section */}
-        {isCurrentPoint && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium">Time Remaining</span>
-              <span className={`text-lg font-bold ${pointTimeLeft <= 60 ? 'text-red-500' : ''}`}>
-                {Math.floor(pointTimeLeft / 60)}:{(pointTimeLeft % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
-            
-            {/* Progress bar */}
-            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className={`h-full ${getTimerColor(pointTimeLeft)} transition-all duration-300`}
-                style={{ 
-                  width: `${(pointTimeLeft / 180) * 100}%`,
-                  transition: 'width 1s linear'
-                }}
-              />
-            </div>
-
-            {/* Helper text */}
-            <div className="mt-2 flex justify-between text-xs text-gray-500">
-              <span>Discussion Point {currentPointIndex + 1} of {discussion!.discussion_points.length}</span>
-              {pointTimeLeft <= 30 && (
-                <span className="text-red-500 font-medium animate-pulse">
-                  Wrapping up soon...
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-  
   return (
     <Card className={`w-full ${getCardHeight()} flex flex-col`}>
       <CardHeader className="flex-shrink-0 space-y-2">
         <CardTitle className="text-2xl font-bold text-center">
           Discussion Guide
         </CardTitle>
-        <h3 className="font-semibold"></h3>
         <Separator />
       </CardHeader>
+
       <CardContent className="flex-grow overflow-hidden p-0">
         <ScrollArea className="h-full px-4">
-          <section className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Task</h3>
-            <p className="text-sm text-gray-600">
-              {discussion.task}
-            </p>
-          </section>
+          <HeaderContent 
+            task={discussion.task}
+            scenario={discussion.scenario}
+          />
 
-          <section className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Scenario</h3>
-            <p className="text-sm text-gray-600">
-              {discussion.scenario}
-            </p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-semibold mb-2">Discussion Points</h3>
-            <Accordion 
-              type="single" 
-              value={openItem}
-              onValueChange={setOpenItem}
-              className="w-full"
-            >
-              {discussion.discussion_points.map((point, index) => (
-                <AccordionItem 
-                  key={index} 
-                  value={`item-${index}`}
-                  disabled={index !== currentPointIndex}
-                  className={index !== currentPointIndex ? 'opacity-50' : ''}
-                >
-                  <AccordionTrigger 
-                    className={`
-                      [&[data-state=open]]:text-primary 
-                      text-left 
-                      ${mode !== 'discussion' ? '[&>svg]:hidden' : ''}
-                    `}
-                    disabled={index !== currentPointIndex}
-                  >
-                    <div className="flex gap-2">
-                      <span className="w-6">{index + 1}.</span>
-                      <span>{point}</span>
-                    </div>
-                  </AccordionTrigger>
-                  {index === currentPointIndex && (
-                    <AccordionContent>
-                      {renderAccordionContent(point, index)}
-                    </AccordionContent>
-                  )}
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </section>
+          <DiscussionPoints
+            discussion={discussion}
+            mode={mode}
+            currentPointIndex={currentPointIndex}
+            openItem={openItem}
+            setOpenItem={setOpenItem}
+            sharedAnswers={sharedAnswers}
+            editingPoint={editingPoint}
+            setEditingPoint={setEditingPoint}
+            editedContent={editedContent}
+            setEditedContent={setEditedContent}
+            handleSaveEdit={handleSaveEdit}
+            handleDelete={handleDelete}
+            handleUndo={handleUndo}
+            pointTimeLeft={pointTimeLeft}
+          />
         </ScrollArea>
       </CardContent>
+
       {mode === 'discussion' && (
         <CardFooter className="flex-shrink-0 border-t pt-4">
           <div className="w-full flex justify-between items-center mt-2">
@@ -638,125 +472,34 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         </CardFooter>
       )}
 
-      {mode === 'discussion' && (
-        <Dialog 
-          open={isReviewOpen} 
-          onOpenChange={(open) => {
-            if (!isTimeUp) {
-              setIsReviewOpen(open);
-            }
-          }}
-        >
-          <DialogContent className="max-w-3xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold mb-4">
-                {isTimeUp ? "Time's Up! Please Submit Your Answers" : "Review Your Answers"}
-              </DialogTitle>
-            </DialogHeader>
+      <Timer
+        timeLeft={timeLeft}
+        setTimeLeft={setTimeLeft}
+        isRunning={isRunning}
+        mode={mode}
+        isSubmitted={isSubmitted}
+        onTimeUp={() => {
+          setIsTimeUp(true);
+          setIsReviewOpen(true);
+        }}
+        discussionId={discussion.id}
+      />
 
-            <ScrollArea className="pr-4 max-h-[60vh]">
-              <div className="space-y-8">
-                {discussion.discussion_points.map((point, index) => (
-                  <div key={index} className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <span className="font-semibold text-lg min-w-[24px]">{index + 1}.</span>
-                      <div className="space-y-4 flex-1">
-                        <h4 className="font-semibold text-lg">{point}</h4>
-                        
-                        {/* Show shared bullet points in review */}
-                        {sharedAnswers[`point${index}`]?.length > 0 ? (
-                          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                            {sharedAnswers[`point${index}`].map((point, i) => (
-                              <div key={i} className="flex items-start gap-2 group">
-                                <span className="text-gray-500 pt-1.5 -mt-1.5">•</span>
-                                {editingPoint?.index === index && editingPoint?.bulletIndex === i ? (
-                                  <div className="flex-1 flex items-center gap-2">
-                                    <Input
-                                      className="flex-1"
-                                      value={editedContent}
-                                      onChange={(e) => setEditedContent(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          handleSaveEdit(index, i, editedContent);
-                                        } else if (e.key === 'Escape') {
-                                          setEditingPoint(null);
-                                        }
-                                      }}
-                                      autoFocus
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleSaveEdit(index, i, editedContent)}
-                                    >
-                                      Save
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setEditingPoint(null)}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex-1 flex items-start justify-between group">
-                                    <p className={`text-sm ${deletedItems[`point${index}`]?.[i] ? 'text-gray-400 line-through' : 'text-gray-600'}`}>
-                                      {typeof point === 'string' ? point : point.content}
-                                    </p>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setEditingPoint({ index, bulletIndex: i });
-                                          setEditedContent(typeof point === 'string' ? point : point.content);
-                                        }}
-                                      >
-                                        Edit
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-red-500 hover:text-red-700"
-                                        onClick={() => handleDelete(index, i)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 p-6 rounded-lg text-center">                         
-                            <p className="text-sm text-gray-600 mt-1">
-                              Key points will be generated as your group discusses this topic.
-                            </p>                           
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {index < discussion.discussion_points.length - 1 && (
-                      <Separator className="my-4" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            <DialogFooter className="gap-2 mt-6">
-              {!isTimeUp && (
-                <Button variant="outline" onClick={() => setIsReviewOpen(false)}>
-                  Cancel
-                </Button>
-              )}
-              <Button onClick={handleSubmit} className="px-8">
-                Submit
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      <ReviewDialog
+        isOpen={isReviewOpen}
+        setIsOpen={setIsReviewOpen}
+        isTimeUp={isTimeUp}
+        discussion={discussion}
+        sharedAnswers={sharedAnswers}
+        editingPoint={editingPoint}
+        setEditingPoint={setEditingPoint}
+        editedContent={editedContent}
+        setEditedContent={setEditedContent}
+        handleSaveEdit={handleSaveEdit}
+        handleDelete={handleDelete}
+        handleSubmit={handleSubmit}
+        handleUndo={handleUndo}
+      />
     </Card>
   );
 }

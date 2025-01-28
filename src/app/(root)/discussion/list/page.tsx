@@ -37,7 +37,7 @@ export default function GroupDiscussions() {
       if (error) throw error;
       setDiscussions(discussions || []);
     } catch (error) {
-      console.error('Error loading discussions:', error);
+      console.log('Error loading discussions:', error);
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ export default function GroupDiscussions() {
       // Remove the session from local state
       setDiscussions(discusisons.filter(discusison => discusison.id !== discussionToDelete));
     } catch (error) {
-      console.error('Error deleting discussion:', error);
+      console.log('Error deleting discussion:', error);
     } finally {
       setIsDeleting(false);
       setDiscussionToDelete(null);
