@@ -107,7 +107,6 @@ export interface SharedAnswersRow {
   last_updated: string;
 }
 
-
 // User
 
 export interface SupabaseUser {

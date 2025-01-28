@@ -192,7 +192,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
           filter: `group_id=eq.${groupId}`
         },
         (payload) => {
-          const newAnswers = (payload.new as any)?.answers;
+          const newAnswers = (payload.new as { answers: SharedAnswers })?.answers;
           if (newAnswers && typeof newAnswers === 'object') {
             setSharedAnswers(newAnswers);
           }
@@ -200,9 +200,9 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       )
       .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
+        return () => {
+        channel.unsubscribe();
+        };
   }, [discussion?.id, groupId]);
 
   // Save answers to localStorage effect
