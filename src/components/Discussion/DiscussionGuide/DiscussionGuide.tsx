@@ -17,7 +17,6 @@ import {
   fetchSharedAnswers,
   deleteAnswerPoint,
   saveAnswerEdit,
-  submitAnswers,
   updateCurrentPoint
 } from '@/lib/actions/discussion'
 
@@ -48,12 +47,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     return localStorage.getItem(`${discussion?.id}-isTimeUp`) === 'true';
   });
   
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [ isSubmitted ] = useState(false)
 
   const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null);
   const [editedContent, setEditedContent] = useState("");
-  const [deletedItems, setDeletedItems] = useState<{[key: string]: boolean[]}>({});
-  console.log(deletedItems)
 
   const [currentPointIndex, setCurrentPointIndex] = useState(0);
 
@@ -248,14 +245,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       const { error } = await deleteAnswerPoint(discussion.id, groupId, pointIndex, bulletIndex, updatedAnswers);
   
       if (error) throw error;
-      
-      setDeletedItems(prev => ({
-        ...prev,
-        [`point${pointIndex}`]: [
-          ...(prev[`point${pointIndex}`] || Array(sharedAnswers[`point${pointIndex}`]?.length || 0).fill(false)),
-          true
-        ]
-      }));
       
       toast.success('Bullet point deleted');
     } catch (error) {
