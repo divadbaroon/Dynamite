@@ -5,23 +5,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Trash2, Check } from "lucide-react"
-import { BulletPoint, SharedAnswers, Discussion } from "@/types"
-
-interface ReviewDialogProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  isTimeUp: boolean;
-  discussion: Discussion;
-  sharedAnswers: SharedAnswers;
-  editingPoint: { index: number; bulletIndex: number; } | null;
-  setEditingPoint: (point: { index: number; bulletIndex: number; } | null) => void;
-  editedContent: string;
-  setEditedContent: (content: string) => void;
-  handleSaveEdit: (index: number, bulletIndex: number, content: string) => void;
-  handleDelete: (index: number, bulletIndex: number) => void;
-  handleSubmit: () => void;
-  handleUndo: (index: number, bulletIndex: number) => void;
-}
+import { ReviewDialogProps, BulletPoint } from "@/types"
+import { submitAnswers } from "@/lib/actions/answers"
+import { toast } from "sonner"
 
 export function ReviewDialog({
   isOpen,
@@ -35,8 +21,9 @@ export function ReviewDialog({
   setEditedContent,
   handleSaveEdit,
   handleDelete,
-  handleSubmit,
-  handleUndo
+  handleUndo,
+  groupId,
+  userId
 }: ReviewDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -44,12 +31,40 @@ export function ReviewDialog({
   const handleSubmitClick = async () => {
     setIsSubmitting(true);
     
-    // Simulate a delay before showing success state
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const result = await submitAnswers(discussion.id, groupId, userId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to submit answers');
+      }
+  
       setIsSubmitted(true);
-      handleSubmit();
-    }, 1000);
+      
+      // Clear localStorage
+      localStorage.removeItem(`${discussion.id}-timeLeft`);
+      localStorage.removeItem(`${discussion.id}-timerTimestamp`);
+      localStorage.removeItem(`${discussion.id}-isTimeUp`);
+      localStorage.removeItem(`${discussion.id}-discussionAnswers`);
+      localStorage.removeItem(`${discussion.id}-pointTimeLeft`);        
+      localStorage.removeItem(`${discussion.id}-pointTimerTimestamp`);  
+  
+      await toast.promise(
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+        {
+          loading: 'Submitting your answers...',
+          success: () => {
+            window.location.href = `/feedback/${discussion.id}/${groupId}`;
+            return 'Answers submitted successfully! You will be redirected to the feedback page shortly.';
+          },
+          error: 'Failed to submit answers',
+        }
+      );
+    } catch (error) {
+      console.error('Error submitting answers:', error);
+      toast.error('Failed to submit answers. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
