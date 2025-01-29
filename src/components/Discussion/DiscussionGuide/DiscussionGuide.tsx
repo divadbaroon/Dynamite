@@ -340,50 +340,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!discussion?.id || !discussion?.author || !groupId) {
-      toast.error("Missing discussion or group information");
-      return;
-    }
-  
-    try {
-      // Transform answers to SharedAnswers format
-      const transformedAnswers: SharedAnswers = Object.entries(answers).reduce((acc, [key, value]) => {
-        acc[key] = [{ content: value, isDeleted: false }];
-        return acc;
-      }, {} as SharedAnswers);
-  
-      const { error } = await submitAnswers(discussion.id, discussion.author, transformedAnswers);
-  
-      if (error) throw error;
-  
-      localStorage.removeItem(`${discussion?.id}-timeLeft`);
-      localStorage.removeItem(`${discussion?.id}-timerTimestamp`);
-      localStorage.removeItem(`${discussion?.id}-isTimeUp`);
-      localStorage.removeItem(`${discussion?.id}-discussionAnswers`);
-      localStorage.removeItem(`${discussion?.id}-pointTimeLeft`);        
-      localStorage.removeItem(`${discussion?.id}-pointTimerTimestamp`);  
-      
-      setIsSubmitted(true);
-      setIsReviewOpen(false);
-      
-      await toast.promise(
-        new Promise((resolve) => setTimeout(resolve, 1000)),
-        {
-          loading: 'Submitting your answers...',
-          success: () => {
-            window.location.href = '/feedback';
-            return 'Answers submitted successfully! You will be redirected to the feedback page shortly.';
-          },
-          error: 'Failed to submit answers',
-        }
-      );
-    } catch (error) {
-      console.error('Error submitting answers:', error);
-      toast.error("Failed to submit answers");
-    }
-  };
-
   const handleUndo = async (pointIndex: number, bulletIndex: number) => {
     if (!discussion?.id || !groupId) {
       toast.error("Missing discussion or group information");
@@ -466,6 +422,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
             handleDelete={handleDelete}
             handleUndo={handleUndo}
             pointTimeLeft={pointTimeLeft}
+            timeLeft={timeLeft}
           />
         </ScrollArea>
       </CardContent>
@@ -492,21 +449,24 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         discussionId={discussion.id}
       />
 
-      <ReviewDialog
-        isOpen={isReviewOpen}
-        setIsOpen={setIsReviewOpen}
-        isTimeUp={isTimeUp}
-        discussion={discussion}
-        sharedAnswers={sharedAnswers}
-        editingPoint={editingPoint}
-        setEditingPoint={setEditingPoint}
-        editedContent={editedContent}
-        setEditedContent={setEditedContent}
-        handleSaveEdit={handleSaveEdit}
-        handleDelete={handleDelete}
-        handleSubmit={handleSubmit}
-        handleUndo={handleUndo}
-      />
+      {isReviewOpen && discussion.author && ( 
+        <ReviewDialog
+          isOpen={isReviewOpen}
+          setIsOpen={setIsReviewOpen}
+          isTimeUp={isTimeUp}
+          discussion={discussion}
+          sharedAnswers={sharedAnswers}
+          editingPoint={editingPoint}
+          setEditingPoint={setEditingPoint}
+          editedContent={editedContent}
+          setEditedContent={setEditedContent}
+          handleSaveEdit={handleSaveEdit}
+          handleDelete={handleDelete}
+          handleUndo={handleUndo}
+          groupId={groupId}
+          userId={discussion.author}
+        />
+      )}
     </Card>
   );
 }
