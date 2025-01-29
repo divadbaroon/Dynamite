@@ -88,56 +88,64 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
 
      console.log("5.) Combined transcript", transcript)
      
-     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are analyzing a live classroom discussion between 3-4 students. Your role is to create bullet points that capture the very gist of the conversation, while still mainting the original content from the students.
-    
-                    Current discussion point: "${currentDiscussionPoint}"
-                    
-                    Examples of capturing discussion points:
-                    Original discussion:
-                    Student 1: "Like, I think that, um, when we use too much plastic and stuff, it goes into the ocean"
-                    Student 2: "Yeah and the fish eat it!"
-                    Student 3: "It's like messing up everything in the ocean, the whole food chain"
-                    Good point: "Plastic in oceans messes up the whole food chain"
-                    Bad point: "Marine pollution impacts ecosystems" (too formal)
-                    
-                    Original discussion:
-                    Student 1: "Maybe if we used paper bags?"
-                    Student 2: "Or just bring our own bags"
-                    Student 1: "Yeah that's so easy"
-                    Student 3: "We could totally do that"
-                    Good point: "Bringing our own bags is an easy fix"
-                    Bad point: "Alternative solutions to plastic bags were discussed" (misses the key insight)
-    
-                    Key guidelines:
-                    1. NEVER repeat or rephrase existing points
-                    2. Focus on NEW ideas that emerge from the group discussion
-                    3. Capture the collective insight, not individual comments
-                    4. Keep the students' casual voice
-                    5. Make each point clear and memorable
-                    
-                    Return the response as a JSON object with this structure:
-                    {
-                      "points": ["core point 1", "core point 2"]
-                    }`
-          },
-          {
-            role: "user",
-            content: `Current discussion topic: ${currentDiscussionPoint}
-                      
-                      Existing points (DO NOT duplicate or rephrase these): 
-                      ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
-                      
-                      Discussion transcript:
-                      ${transcript}`
-          }
-        ],
-        response_format: { type: "json_object" }
-    })
+    const completion = await openai.chat.completions.create({
+    model: "o1",
+    messages: [
+      {
+        role: "system",
+        content: `You are analyzing a classroom discussion transcript. Your role is to capture key points while keeping the students' authentic voice:
+  
+                  "${currentDiscussionPoint}"
+                  
+                  Key Requirements:
+                  1. Summarize ideas coherently while keeping student language style
+                  2. Do not repeat/ rephrase points already present
+                  3. Only include points clearly present in the transcript
+                  4. Keep the casual, natural way students express themselves
+                  5. Never add points similar to existing ones
+                  6. Combine related ideas from the same discussion thread
+                  
+                  Guidelines for point creation:
+                  - Light summarization is okay to make points clearer
+                  - Keep student phrases and vocabulary when combining ideas
+                  - Each point should sound like something a student would say
+                  - Avoid formal or academic language
+                  - Keep points under 100 characters
+                  - Skip points similar to existing ones
+                  
+                  Examples of good summarization:
+                  Original: "Like, I think that, um, when we use too much plastic and stuff, it goes into the ocean and then, you know, the fish eat it and that's really bad for them"
+                  Good point: "Plastic in oceans is bad cause fish eat it and get hurt"
+                  Bad point: "Marine ecosystem degradation due to plastic pollution" (too formal)
+                  
+                  Original: "I was thinking maybe if we, like, used paper bags instead of plastic ones, and then also like brought our own bags to the store, that would help a lot with the plastic problem"
+                  Good point: "Using paper bags and bringing our own bags helps with plastic"
+                  Bad point: "Implementation of sustainable shopping practices" (not student voice)
+                  
+                  Remember:
+                  1. Check all existing points to avoid duplicates
+                  2. Only combine ideas that are clearly related
+                  3. Keep the natural flow of student speech
+                  4. Make it sound like students talking to other students
+                  
+                  Return the response as a JSON object with this structure:
+                  {
+                    "points": ["point 1 from transcript", "point 2 from transcript"]
+                  }`
+                      },
+                      {
+                        role: "user",
+                        content: `Current discussion topic: ${currentDiscussionPoint}
+                  
+                  Existing points (DO NOT duplicate or rephrase these): 
+                  ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
+                  
+                  Discussion transcript:
+                  ${transcript}`
+                      }
+                    ],
+                    response_format: { type: "json_object" }
+                  })
     
      const content = completion.choices[0].message.content
      if (!content) {
