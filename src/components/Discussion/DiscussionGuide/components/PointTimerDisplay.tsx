@@ -16,9 +16,7 @@ export default function PointTimerDisplay({
   const [prevTime, setPrevTime] = useState(pointTimeLeft);
   const [width, setWidth] = useState(100);
 
-  // Calculate the dynamic point duration based on remaining time and points
-  const remainingPoints = totalPoints - currentPointIndex;
-  const pointDuration = Math.floor(timeLeft / remainingPoints);
+  const pointDuration = Math.floor(timeLeft / totalPoints);
 
   useEffect(() => {
     if (pointTimeLeft > prevTime) {
