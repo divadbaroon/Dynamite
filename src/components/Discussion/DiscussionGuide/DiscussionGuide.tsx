@@ -251,48 +251,56 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   };
 
   useEffect(() => {
-    if (!isRunning || mode !== 'discussion' || !discussion?.id) return;
+    // Create stable references to the values we need
+    const discussionId = discussion?.id;
+    const totalPoints = discussion?.discussion_points?.length ?? 0;
+    
+    if (!isRunning || mode !== 'discussion' || !discussionId) return;
   
-    localStorage.setItem(`${discussion?.id}-pointTimeLeft`, pointTimeLeft.toString());
-    localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
+    localStorage.setItem(`${discussionId}-pointTimeLeft`, pointTimeLeft.toString());
+    localStorage.setItem(`${discussionId}-pointTimerTimestamp`, Date.now().toString());
   
     const timer = setInterval(async () => {
-      setPointTimeLeft(prev => Math.max(0, prev - 1));
-  
-      if (pointTimeLeft === 1) { 
-        if (currentPointIndex < discussion.discussion_points.length - 1) {
+      if (pointTimeLeft <= 1) {
+        if (currentPointIndex < totalPoints - 1) {
           const nextPointIndex = currentPointIndex + 1;
           
           try {
-            const { error } = await updateCurrentPoint(discussion.id, nextPointIndex)
+            const { error } = await updateCurrentPoint(discussionId, nextPointIndex);
+            
             if (!error) {
-              const totalTimeInSeconds = timeLeft
-              const remainingPoints = discussion.discussion_points.length - nextPointIndex
-              const newPointTime = Math.floor(totalTimeInSeconds / remainingPoints)
-      
-              setTimeout(() => {
-                setCurrentPointIndex(nextPointIndex)
-                setOpenItem(`item-${nextPointIndex}`)
-      
-                setPointTimeLeft(newPointTime)
-                localStorage.setItem(`${discussion?.id}-pointTimeLeft`, newPointTime.toString())
-      
-                setCurrentPointDuration(newPointTime)
-      
-                localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString())
-              }, 0)
+              const totalTimeInSeconds = timeLeft;
+              const remainingPoints = totalPoints - nextPointIndex;
+              const newPointTime = Math.ceil(totalTimeInSeconds / remainingPoints);
+  
+              setCurrentPointIndex(nextPointIndex);
+              setOpenItem(`item-${nextPointIndex}`);
+              setPointTimeLeft(newPointTime);
+              setCurrentPointDuration(newPointTime);
+              
+              localStorage.setItem(`${discussionId}-pointTimeLeft`, newPointTime.toString());
+              localStorage.setItem(`${discussionId}-pointTimerTimestamp`, Date.now().toString());
             } else {
-              console.log('Error updating current point:', error)
+              console.error('Error updating current point:', error);
             }
           } catch (error) {
-            console.log('Error in update operation:', error)
+            console.error('Error in update operation:', error);
           }
         }
+      } else {
+        setPointTimeLeft(prev => Math.max(0, prev - 1));
       }
     }, 1000);
   
     return () => clearInterval(timer);
-  }, [isRunning, mode, pointTimeLeft, currentPointIndex, discussion?.id, discussion?.discussion_points.length, timeLeft]);
+  }, [
+    isRunning,
+    mode,
+    pointTimeLeft,
+    currentPointIndex,
+    discussion?.id,
+    discussion?.discussion_points?.length 
+  ]);
 
   const handleSaveEdit = async (pointIndex: number, bulletIndex: number, newContent: string) => {
     if (!discussion?.id || !groupId) {
