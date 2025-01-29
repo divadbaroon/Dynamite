@@ -56,8 +56,8 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
     checkDiscussionStatus();
     setLoading(false);
 
-    // Set up polling every 5 seconds
-    const intervalId = setInterval(checkDiscussionStatus, 5000);
+    // Set up polling every 10 seconds
+    const intervalId = setInterval(checkDiscussionStatus, 10000);
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
