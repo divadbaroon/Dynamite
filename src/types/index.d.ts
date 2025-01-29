@@ -152,3 +152,54 @@ export interface NavbarProps {
   user: User | null
 }
 
+// Discussion Points
+
+export interface DiscussionPointsProps {
+  discussion: Discussion;
+  mode: string;
+  currentPointIndex: number;
+  openItem: string | undefined;
+  setOpenItem: (value: string | undefined) => void;
+  sharedAnswers: SharedAnswers;
+  editingPoint: { index: number; bulletIndex: number; } | null;
+  setEditingPoint: (point: { index: number; bulletIndex: number; } | null) => void;
+  editedContent: string;
+  setEditedContent: (content: string) => void;
+  handleSaveEdit: (index: number, bulletIndex: number, content: string) => void;
+  handleDelete: (index: number, bulletIndex: number) => void;
+  handleUndo: (index: number, bulletIndex: number) => void;  
+  pointTimeLeft: number;
+  timeLeft: number;
+}
+
+// Answer Review Dialog
+
+export interface ReviewDialogProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  isTimeUp: boolean;
+  discussion: Discussion;
+  sharedAnswers: SharedAnswers;
+  editingPoint: { index: number; bulletIndex: number; } | null;
+  setEditingPoint: (point: { index: number; bulletIndex: number; } | null) => void;
+  editedContent: string;
+  setEditedContent: (content: string) => void;
+  handleSaveEdit: (index: number, bulletIndex: number, content: string) => void;
+  handleDelete: (index: number, bulletIndex: number) => void;
+  handleUndo: (index: number, bulletIndex: number) => void;
+  groupId: string;
+  userId: string;
+}
+
+// Ratings
+
+export interface Ratings {
+  usability: number
+  content: number
+  overall: number
+}
+
+export interface StarRatingProps {
+  name: string
+  onChange: (rating: number) => void
+}
