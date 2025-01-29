@@ -3,10 +3,7 @@
 import { useState } from "react"
 import { Star as StarIcon } from "lucide-react"
 
-interface StarRatingProps {
-  name: string
-  onChange: (rating: number) => void
-}
+import { StarRatingProps } from "@/types"
 
 export function StarRating({ onChange }: StarRatingProps) {
   const [rating, setRating] = useState(0)
