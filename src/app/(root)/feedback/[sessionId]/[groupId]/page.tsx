@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -6,26 +6,56 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { StarRating } from "@/components/Feedback/star-rating"
-
-interface Ratings {
-  usability: number
-  content: number
-  overall: number
-}
+import { submitFeedback } from "@/lib/actions/feedback"
+import { toast } from "sonner"
+import { useParams } from "next/navigation"
+import { Ratings } from "@/types"
 
 export default function FeedbackPage() {
+  const params = useParams()
+  const sessionId = params.sessionId as string
+  const groupId = params.groupId as string
+  
   const [feedback, setFeedback] = useState("")
   const [ratings, setRatings] = useState<Ratings>({
     usability: 0,
     content: 0,
     overall: 0,
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Feedback submitted:", { feedback, ratings })
-    setSubmitted(true)
+    
+    if (!sessionId || !groupId) {
+      toast.error('Session information is missing')
+      return
+    }
+
+    if (ratings.usability === 0 || ratings.content === 0 || ratings.overall === 0) {
+      toast.error('Please provide all ratings')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const result = await submitFeedback(null, sessionId, groupId, ratings, feedback)
+
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+
+      setSubmitted(true)
+      toast.success('Thank you for your feedback!')
+      
+    } catch (error) {
+      console.error('Error submitting feedback:', error)
+      toast.error('Failed to submit feedback. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleRatingChange = (category: keyof Ratings) => (rating: number) => {
@@ -99,9 +129,15 @@ export default function FeedbackPage() {
               <Button 
                 type="submit" 
                 className="w-full text-lg py-6"
-                disabled={submitted}
+                disabled={isSubmitting || submitted}
               >
-                {submitted ? "Feedback Submitted" : "Submit Feedback"}
+                {isSubmitting ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                ) : submitted ? (
+                  "Feedback Submitted"
+                ) : (
+                  "Submit Feedback"
+                )}
               </Button>
             </CardFooter>
           </form>
