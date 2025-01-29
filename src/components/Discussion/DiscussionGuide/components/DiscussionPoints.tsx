@@ -21,7 +21,8 @@ export function DiscussionPoints({
   handleDelete,
   handleUndo,
   pointTimeLeft,
-  timeLeft
+  timeLeft,
+  currentPointDuration
 }: DiscussionPointsProps) {
   const renderAccordionContent = (point: string, index: number) => {
     if (mode === 'waiting-room') return null;
@@ -142,7 +143,7 @@ export function DiscussionPoints({
               pointTimeLeft={pointTimeLeft}
               totalPoints={discussion.discussion_points.length}
               currentPointIndex={currentPointIndex}
-              timeLeft={timeLeft}
+              currentPointDuration={currentPointDuration}
             />
           </>
         )}

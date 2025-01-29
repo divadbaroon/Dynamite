@@ -1,43 +1,35 @@
 import React, { useEffect, useState } from 'react';
 
 interface PointTimerDisplayProps {
-  pointTimeLeft: number;
-  totalPoints: number;
-  currentPointIndex: number;
-  timeLeft: number;  
+  pointTimeLeft: number
+  currentPointDuration: number
+  totalPoints: number
+  currentPointIndex: number
 }
 
 export default function PointTimerDisplay({ 
   pointTimeLeft, 
+  currentPointDuration, 
   totalPoints, 
-  currentPointIndex,
-  timeLeft
+  currentPointIndex
 }: PointTimerDisplayProps) {
-  const [prevTime, setPrevTime] = useState(pointTimeLeft);
   const [width, setWidth] = useState(100);
 
-  const pointDuration = Math.floor(timeLeft / totalPoints);
-
   useEffect(() => {
-    if (pointTimeLeft > prevTime) {
-      setPrevTime(pointTimeLeft);
-    }
-    
-    const newWidth = (pointTimeLeft / pointDuration) * 100;
+    // Calculate width based on actual per-point duration
+    const newWidth = (pointTimeLeft / currentPointDuration) * 100;
     setWidth(Math.max(0, Math.min(100, newWidth)));
-    
-    setPrevTime(pointTimeLeft);
-  }, [pointTimeLeft, pointDuration, prevTime]);
+  }, [pointTimeLeft, currentPointDuration]);
 
-  const getTimerColor = (timeLeft: number) => {
-    if (timeLeft > pointDuration * 0.66) return 'bg-green-500';
-    if (timeLeft > pointDuration * 0.33) return 'bg-yellow-500';
+  const getTimerColor = (percentage: number) => {
+    if (percentage > 66) return 'bg-green-500';
+    if (percentage > 33) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
+    const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
@@ -45,24 +37,23 @@ export default function PointTimerDisplay({
     <div className="bg-gray-50 p-4 rounded-lg mb-6">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium">Time Remaining</span>
-        <span className={`text-lg font-bold ${pointTimeLeft <= pointDuration * 0.33 ? 'text-red-500' : ''}`}>
+        <span className={`text-lg font-bold ${width <= 33 ? 'text-red-500' : ''}`}>
           {formatTime(pointTimeLeft)}
         </span>
       </div>
       
       <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
         <div 
-          className={`h-full ${getTimerColor(pointTimeLeft)} transition-all duration-1000`}
-          style={{ 
-            width: `${width}%`,
-            transitionTimingFunction: 'linear'
-          }}
+          className={`${getTimerColor(width)} h-full transition-all duration-500 ease-linear`}
+          style={{ width: `${width}%` }}
         />
       </div>
 
       <div className="mt-2 flex justify-between text-xs text-gray-500">
-        <span>Discussion Point {currentPointIndex + 1} of {totalPoints}</span>
-        {pointTimeLeft <= pointDuration * 0.166 && (
+        <span>
+          Discussion Point {currentPointIndex + 1} of {totalPoints}
+        </span>
+        {width <= 16.6 && (
           <span className="text-red-500 font-medium animate-pulse">
             Wrapping up soon...
           </span>
