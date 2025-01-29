@@ -93,7 +93,7 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
       messages: [
         {
           role: "system",
-          content: `You are analyzing a live classroom discussion between 3-4 students. Your role is to create bullet points that capture new ideas as they emerge in the conversation.
+          content: `You are analyzing a live classroom discussion between 3-4 students. Your role is to create bullet points that capture the very gist of the conversation, while still mainting the original content from the students.
     
                     Current discussion point: "${currentDiscussionPoint}"
                     
