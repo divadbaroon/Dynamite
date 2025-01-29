@@ -62,7 +62,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
       const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
       
-      // If the timer ran out, set to zero
       if (remainingTime === 0) {
         localStorage.removeItem(`${discussion?.id}-pointTimeLeft`);
         localStorage.removeItem(`${discussion?.id}-pointTimerTimestamp`);
@@ -72,10 +71,9 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       return remainingTime;
     }
     
-    // Calculate point time based on total time and number of points
-    const totalTimeInSeconds = discussion?.time_left || 600; // 10 minutes default
+    const totalTimeInSeconds = discussion?.time_left || 600;
     const numberOfPoints = discussion?.discussion_points?.length || 1;
-    return Math.floor(totalTimeInSeconds / numberOfPoints);
+    return Math.ceil(totalTimeInSeconds / numberOfPoints); 
   });
   
 
@@ -98,31 +96,24 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         const { discussion: currentDiscussion, error } = await getDiscussionById(discussion.id);
         if (error) throw error;
   
-        if (currentDiscussion) {
-          // For the main timer
-          if (!localStorage.getItem(`${discussion?.id}-timeLeft`)) {
-            setTimeLeft(currentDiscussion.time_left || 600);
-          }
-          setIsRunning(currentDiscussion.status === 'active');
-  
-          // For the point timer - check both localStorage and server state
-          if (currentDiscussion.current_point !== undefined) {
-            setCurrentPointIndex(currentDiscussion.current_point);
+        if (currentDiscussion.current_point !== undefined) {
+          setCurrentPointIndex(currentDiscussion.current_point);
+          
+          const savedPointTime = localStorage.getItem(`${discussion?.id}-pointTimeLeft`);
+          const savedPointTimestamp = localStorage.getItem(`${discussion?.id}-pointTimerTimestamp`);
+          
+          if (savedPointTime && savedPointTimestamp) {
+            const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
+            const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
+            setPointTimeLeft(remainingTime);
+          } else {
+            const totalTimeInSeconds = currentDiscussion.time_left || 600;
+            const numberOfPoints = currentDiscussion.discussion_points?.length || 1;
+            const pointTime = Math.ceil(totalTimeInSeconds / numberOfPoints);
             
-            // If we have saved point time, use it
-            const savedPointTime = localStorage.getItem(`${discussion?.id}-pointTimeLeft`);
-            const savedPointTimestamp = localStorage.getItem(`${discussion?.id}-pointTimerTimestamp`);
-            
-            if (savedPointTime && savedPointTimestamp) {
-              const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
-              const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
-              setPointTimeLeft(remainingTime);
-            } else {
-              // If no saved time, start fresh at 180
-              setPointTimeLeft(180);
-              localStorage.setItem(`${discussion?.id}-pointTimeLeft`, '180');
-              localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
-            }
+            setPointTimeLeft(pointTime);
+            localStorage.setItem(`${discussion?.id}-pointTimeLeft`, pointTime.toString());
+            localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
           }
         }
       } catch (error) {
