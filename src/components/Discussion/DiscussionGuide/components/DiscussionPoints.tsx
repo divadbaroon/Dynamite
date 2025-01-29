@@ -42,7 +42,7 @@ export function DiscussionPoints({
         {bulletPoints.length > 0 && index === currentPointIndex ? ( 
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             {bulletPoints.map((point, i) => (
-              <div key={i} className="flex items-start gap-2 group">
+              <div key={i} className="flex items-start gap-2">
                 <span className="text-gray-500 pt-1.5 -mt-1.5">•</span>
                 {editingPoint?.index === index && editingPoint?.bulletIndex === i ? (
                   <div className="flex-1 flex items-center gap-2">
@@ -74,12 +74,12 @@ export function DiscussionPoints({
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex-1 flex items-start justify-between group">
+                  <div className="flex-1 flex items-start justify-between gap-8">
                     <p className={`text-sm ${typeof point === 'object' && point.isDeleted ? 'text-gray-400 line-through' : 'text-gray-600'}`}>
                       {typeof point === 'string' ? point : point.content}
                     </p>
                     {isCurrentPoint && (
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2">
                         {typeof point === 'object' && point.isDeleted ? (
                           <Button
                             size="sm"
@@ -121,7 +121,7 @@ export function DiscussionPoints({
         ) : (
           <div className="bg-gray-50 p-6 rounded-lg">
             <div className="flex flex-col items-center space-y-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
