@@ -2,25 +2,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
-import { SharedAnswers, Discussion } from "@/types"
-import { PointTimerDisplay } from './PointTimerDisplay';
+import PointTimerDisplay from './PointTimerDisplay';
 
-interface DiscussionPointsProps {
-  discussion: Discussion;
-  mode: string;
-  currentPointIndex: number;
-  openItem: string | undefined;
-  setOpenItem: (value: string | undefined) => void;
-  sharedAnswers: SharedAnswers;
-  editingPoint: { index: number; bulletIndex: number; } | null;
-  setEditingPoint: (point: { index: number; bulletIndex: number; } | null) => void;
-  editedContent: string;
-  setEditedContent: (content: string) => void;
-  handleSaveEdit: (index: number, bulletIndex: number, content: string) => void;
-  handleDelete: (index: number, bulletIndex: number) => void;
-  handleUndo: (index: number, bulletIndex: number) => void;  
-  pointTimeLeft: number;
-}
+import { DiscussionPointsProps } from "@/types"
 
 export function DiscussionPoints({
   discussion,
@@ -36,7 +20,8 @@ export function DiscussionPoints({
   handleSaveEdit,
   handleDelete,
   handleUndo,
-  pointTimeLeft
+  pointTimeLeft,
+  timeLeft
 }: DiscussionPointsProps) {
   const renderAccordionContent = (point: string, index: number) => {
     if (mode === 'waiting-room') return null;
@@ -157,6 +142,7 @@ export function DiscussionPoints({
               pointTimeLeft={pointTimeLeft}
               totalPoints={discussion.discussion_points.length}
               currentPointIndex={currentPointIndex}
+              timeLeft={timeLeft}
             />
           </>
         )}
