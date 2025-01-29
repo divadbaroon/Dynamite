@@ -126,7 +126,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
           }
         }
       } catch (error) {
-        console.error('Error fetching session:', error);
+        console.log('Error fetching session:', error);
       } finally {
         setLoading(false);
       }
@@ -168,7 +168,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       const { data, error } = await fetchSharedAnswers(discussion.id, groupId);
       
       if (error) {
-        console.error('Error fetching shared answers:', error);
+        console.log('Error fetching shared answers:', error);
       }
       if (data?.answers && typeof data.answers === 'object') {
         setSharedAnswers(data.answers as SharedAnswers);
@@ -248,7 +248,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       
       toast.success('Bullet point deleted');
     } catch (error) {
-      console.error('Error deleting bullet point:', error);
+      console.log('Error deleting bullet point:', error);
       toast.error('Failed to delete bullet point');
     }
   };
@@ -285,10 +285,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
                 localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
               }, 0);
             } else {
-              console.error('Error updating current point:', error);
+              console.log('Error updating current point:', error);
             }
           } catch (error) {
-            console.error('Error in update operation:', error);
+            console.log('Error in update operation:', error);
           }
         }
       }
@@ -324,7 +324,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       setEditingPoint(null);
       toast.success('Bullet point updated');
     } catch (error) {
-      console.error('Error updating bullet point:', error);
+      console.log('Error updating bullet point:', error);
       toast.error('Failed to update bullet point');
     }
   };
@@ -351,7 +351,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       if (error) throw error;
       toast.success('Bullet point restored');
     } catch (error) {
-      console.error('Error restoring bullet point:', error);
+      console.log('Error restoring bullet point:', error);
       toast.error('Failed to restore bullet point');
     }
   };

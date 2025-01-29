@@ -33,7 +33,7 @@ function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
 
                 setDiscussion(response.discussion)
             } catch (error) {
-                console.error("Error fetching discussion:", error)
+                console.log("Error fetching discussion:", error)
                 setError("Failed to load discussion data")
             } finally {
                 setLoading(false)

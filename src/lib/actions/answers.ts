@@ -48,7 +48,7 @@ export async function submitAnswers(discussionId: string, groupId: string, userI
 
     return { success: true }
   } catch (error) {
-    console.error('Error in submitAnswers:', error)
+    console.log('Error in submitAnswers:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
   }
 }

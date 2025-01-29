@@ -26,7 +26,7 @@ const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children
     if (key) {
       setDeepgramKey(key);
     } else {
-      console.error('Deepgram API key is not set in environment variables');
+      console.log('Deepgram API key is not set in environment variables');
     }
   }, [setDeepgramKey]);
 
@@ -49,7 +49,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
     const getUser = async () => {
       const { data: { user: currentUser }, error } = await supabase.auth.getUser()
       if (error) {
-        console.error('Error fetching user:', error)
+        console.log('Error fetching user:', error)
         return
       }
       setUser(currentUser)
@@ -78,7 +78,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
           setHasConsented(data.consent_status ?? false)
         }
       } catch (error) {
-        console.error('Error fetching user consent:', error)
+        console.log('Error fetching user consent:', error)
         setHasConsented(false)
       }
     }
@@ -102,7 +102,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
         setLoading(false)
         scrollToBottom()
       } catch (error) {
-        console.error('Error fetching messages:', error)
+        console.log('Error fetching messages:', error)
         toast.error("Failed to load messages") 
       }
     }
@@ -143,7 +143,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
       setHasConsented(hasConsented)
       setShowConsentModal(false)
     } catch (error) {
-      console.error('Error updating consent:', error)
+      console.log('Error updating consent:', error)
       toast.error("Failed to update consent status")
     } finally {
       setIsProcessingConsent(false)
@@ -169,7 +169,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
   
       setNewMessage("")
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.log('Error sending message:', error)
       toast.error("Failed to send message")
     }
   }, [user, hasConsented, userData, discussionId, groupId, supabase]) 

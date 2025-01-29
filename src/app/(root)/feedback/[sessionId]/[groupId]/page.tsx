@@ -51,7 +51,7 @@ export default function FeedbackPage() {
       toast.success('Thank you for your feedback!')
       
     } catch (error) {
-      console.error('Error submitting feedback:', error)
+      console.log('Error submitting feedback:', error)
       toast.error('Failed to submit feedback. Please try again.')
     } finally {
       setIsSubmitting(false)

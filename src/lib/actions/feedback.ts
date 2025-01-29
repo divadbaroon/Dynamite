@@ -31,13 +31,13 @@ export async function submitFeedback(
       })
 
     if (error) {
-      console.error('Database error:', error)
+      console.log('Database error:', error)
       throw error
     }
 
     return { success: true }
   } catch (error) {
-    console.error('Error submitting feedback:', error)
+    console.log('Error submitting feedback:', error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to submit feedback' 

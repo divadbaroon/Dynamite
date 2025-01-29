@@ -60,7 +60,7 @@ export function ReviewDialog({
         }
       );
     } catch (error) {
-      console.error('Error submitting answers:', error);
+      console.log('Error submitting answers:', error);
       toast.error('Failed to submit answers. Please try again.');
     } finally {
       setIsSubmitting(false);
