@@ -170,6 +170,7 @@ export interface DiscussionPointsProps {
   handleUndo: (index: number, bulletIndex: number) => void;  
   pointTimeLeft: number;
   timeLeft: number;
+  currentPointDuration: number
 }
 
 // Answer Review Dialog
