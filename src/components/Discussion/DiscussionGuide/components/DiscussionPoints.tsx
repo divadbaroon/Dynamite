@@ -21,10 +21,9 @@ export function DiscussionPoints({
   handleDelete,
   handleUndo,
   pointTimeLeft,
-  timeLeft,
   currentPointDuration
 }: DiscussionPointsProps) {
-  const renderAccordionContent = (point: string, index: number) => {
+  const renderAccordionContent = (index: number) => {
     if (mode === 'waiting-room') return null;
     if (mode === 'usage-check') {
       return (
@@ -183,7 +182,7 @@ export function DiscussionPoints({
             </AccordionTrigger>
             {index === currentPointIndex && (
               <AccordionContent>
-                {renderAccordionContent(point, index)}
+                {renderAccordionContent(index)}
               </AccordionContent>
             )}
           </AccordionItem>
