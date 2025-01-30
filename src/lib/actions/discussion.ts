@@ -1,9 +1,14 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { Discussion, SharedAnswers } from '@/types'
+import { Discussion, SharedAnswers, DiscussionPoint } from '@/types'
 
-export async function createDiscussion(data: Omit<Discussion, 'id' | 'created_at' | 'author'>) {
+export type CreateDiscussionInput = Omit<Discussion, 'id' | 'created_at' | 'author' | 'discussion_points'> & {
+  discussion_points: string[]
+}
+
+// Then update your createDiscussion function signature
+export async function createDiscussion(data: CreateDiscussionInput) {
   const supabase = await createClient()
   
   try {
@@ -13,6 +18,21 @@ export async function createDiscussion(data: Omit<Discussion, 'id' | 'created_at
       throw new Error('Not authenticated')
     }
 
+    // Calculate point durations and timestamps
+    const pointDuration = Math.ceil(data.time_left / data.discussion_points.length)
+    const now = new Date()
+    
+    const discussionPoints = data.discussion_points.map((point, index) => {
+      const scheduledStart = new Date(now.getTime() + (index * pointDuration * 1000))
+      
+      return {
+        content: point,
+        index,
+        scheduled_start: scheduledStart.toISOString(),
+        duration: pointDuration
+      }
+    })
+
     const { data: newDiscussion, error } = await supabase
       .from('sessions')
       .insert([{
@@ -20,7 +40,7 @@ export async function createDiscussion(data: Omit<Discussion, 'id' | 'created_at
         title: data.title,
         task: data.task,
         scenario: data.scenario,
-        discussion_points: data.discussion_points,
+        discussion_points: discussionPoints,
         author: user.id,
         participant_count: 0,
         group_count: 0,
@@ -38,6 +58,7 @@ export async function createDiscussion(data: Omit<Discussion, 'id' | 'created_at
     return { discussion: null, error }
   }
 }
+
 
 export async function getAllDiscussions() {
   const supabase = await createClient()
