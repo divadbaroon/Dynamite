@@ -7,13 +7,28 @@ export type Discussion = {
     title: string
     task: string | null
     scenario: string | null
-    discussion_points: string[]
+    discussion_points: DiscussionPoint[]
     author: string | null
     time_left: integer
     participant_count?: number
     group_count?: number
     current_point?: number
   }
+
+export type DiscussionPoint = {
+  content: string;             
+  index: number;              
+  scheduled_start: string;     
+  duration: number;           
+}
+
+export interface PointTimerDisplayProps {
+  discussionPoint: DiscussionPoint;
+  currentPointIndex: number;
+  totalPoints: number;
+  isRunning: boolean;
+  onTimeUp?: () => Promise<void>;
+}
 
 export interface DiscussionProps {
   params: {
@@ -158,6 +173,7 @@ export interface DiscussionPointsProps {
   discussion: Discussion;
   mode: string;
   currentPointIndex: number;
+  setCurrentPointIndex: (index: number) => void;
   openItem: string | undefined;
   setOpenItem: (value: string | undefined) => void;
   sharedAnswers: SharedAnswers;
@@ -170,7 +186,8 @@ export interface DiscussionPointsProps {
   handleUndo: (index: number, bulletIndex: number) => void;  
   pointTimeLeft: number;
   timeLeft: number;
-  currentPointDuration: number
+  currentPointDuration: number;
+  isRunning: boolean;
 }
 
 // Answer Review Dialog
