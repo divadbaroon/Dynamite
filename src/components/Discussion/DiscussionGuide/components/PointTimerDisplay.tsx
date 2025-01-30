@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { PointTimerDisplayProps } from '@/types';
 
 export default function PointTimerDisplay({
@@ -13,7 +13,7 @@ export default function PointTimerDisplay({
   const [width, setWidth] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const calculateTimeLeft = () => {
+  const calculateTimeLeft = useCallback(() => {
     if (!discussion?.has_launched) return null;
     
     const launchTime = new Date(discussion.has_launched).getTime();
@@ -21,7 +21,16 @@ export default function PointTimerDisplay({
     const currentTime = Date.now();
     const endTime = pointStartTime + (discussionPoint.duration * 1000);
     return Math.max(0, Math.floor((endTime - currentTime) / 1000));
-  };
+  }, [discussion?.has_launched, currentPointIndex, discussionPoint.duration]);
+
+  // Handle point transition
+  const handleTimeUp = useCallback(async () => {
+    if (!isTransitioning && onTimeUp) {
+      setIsTransitioning(true);
+      await onTimeUp();
+      setIsTransitioning(false);
+    }
+  }, [isTransitioning, onTimeUp]);
 
   // Initialize timer values
   useEffect(() => {
@@ -30,30 +39,29 @@ export default function PointTimerDisplay({
     
     setTimeLeft(remainingTime);
     setWidth((remainingTime / discussionPoint.duration) * 100);
-  }, [discussionPoint, discussion?.has_launched, currentPointIndex]);
-
-  // Handle point transition
-  const handleTimeUp = async () => {
-    if (!isTransitioning && onTimeUp) {
-      setIsTransitioning(true);
-      await onTimeUp();
-      setIsTransitioning(false);
-    }
-  };
+  }, [calculateTimeLeft, discussionPoint.duration]);
 
   // Timer effect
   useEffect(() => {
     if (!isRunning || isTransitioning || timeLeft === null || !discussion?.has_launched) return;
 
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const checkAndHandleTimeUp = () => {
+      if (timeLeft <= 0 && !isTransitioning) {
+        // Use setTimeout to avoid state updates during render
+        timeoutId = setTimeout(() => {
+          handleTimeUp();
+        }, 0);
+      }
+    };
+
     // Regular countdown
     const countdownInterval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev === null) return null;
-        if (prev <= 1) {
-          handleTimeUp();
-          return 0;
-        }
-        return prev - 1;
+        const newTime = Math.max(0, prev - 1);
+        return newTime;
       });
     }, 1000);
 
@@ -62,21 +70,27 @@ export default function PointTimerDisplay({
       const serverTimeLeft = calculateTimeLeft();
       if (serverTimeLeft === null) return;
 
-      // Only sync if difference is more than 2 seconds
       if (Math.abs(serverTimeLeft - (timeLeft || 0)) > 2) {
         setTimeLeft(serverTimeLeft);
       }
-
-      if (serverTimeLeft <= 0 && !isTransitioning) {
-        handleTimeUp();
-      }
     }, 5000);
+
+    // Check time up condition
+    checkAndHandleTimeUp();
 
     return () => {
       clearInterval(countdownInterval);
       clearInterval(syncInterval);
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [isRunning, isTransitioning, discussion?.has_launched, currentPointIndex, discussionPoint.duration, timeLeft]);
+  }, [
+    isRunning,
+    isTransitioning,
+    discussion?.has_launched,
+    calculateTimeLeft,
+    timeLeft,
+    handleTimeUp
+  ]);
 
   // Update width based on time left
   useEffect(() => {

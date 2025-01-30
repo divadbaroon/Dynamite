@@ -205,10 +205,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
               setPointTimeLeft(newPointTime);
               setCurrentPointDuration(newPointTime);
             } else {
-              console.error('Error updating current point:', error);
+              console.log('Error updating current point:', error);
             }
           } catch (error) {
-            console.error('Error in update operation:', error);
+            console.log('Error in update operation:', error);
           }
         }
       } else {

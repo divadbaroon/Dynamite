@@ -91,19 +91,19 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
       // Update has_launched timestamp
       const { error: launchError } = await updateHasLaunched(discussionId);
       if (launchError) {
-        console.error("Error updating has_launched:", launchError);
+        console.log("Error updating has_launched:", launchError);
       }
   
       // Update discussion point timestamps
       const { error: timestampError } = await updateDiscussionPointTimestamps(discussionId);
       if (timestampError) {
-        console.error("Error updating point timestamps:", timestampError);
+        console.log("Error updating point timestamps:", timestampError);
       }
   
       toast.success("Discussion is starting!");
       router.replace(`/discussion/join/${discussionId}/${groupId}`);
     } catch (error) {
-      console.error("Error during transition:", error);
+      console.log("Error during transition:", error);
       setIsTransitioning(false);
       toast.error("Failed to join discussion");
     }

@@ -32,7 +32,7 @@ export function DiscussionPoints({
         const { error } = await updateCurrentPoint(discussion.id, nextPointIndex);
         
         if (error) {
-          console.error('Error updating current point:', error);
+          console.log('Error updating current point:', error);
           return;
         }
         
@@ -40,7 +40,7 @@ export function DiscussionPoints({
         setCurrentPointIndex(nextPointIndex);
         setOpenItem(`item-${nextPointIndex}`);
       } catch (error) {
-        console.error('Error in update operation:', error);
+        console.log('Error in update operation:', error);
       }
     }
   };

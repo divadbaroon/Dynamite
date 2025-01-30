@@ -339,7 +339,7 @@ export async function updateHasLaunched(discussionId: string) {
 
     return { error };
   } catch (error) {
-    console.error('Error updating has_launched:', error);
+    console.log('Error updating has_launched:', error);
     return { error };
   }
 }
@@ -383,7 +383,7 @@ export async function updateDiscussionPointTimestamps(discussionId: string) {
     
     return { error: null };
   } catch (error) {
-    console.error('Error updating discussion point timestamps:', error);
+    console.log('Error updating discussion point timestamps:', error);
     return { error };
   }
 }

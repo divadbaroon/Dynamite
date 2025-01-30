@@ -16,8 +16,7 @@ export function Timer({
   isRunning, 
   mode, 
   isSubmitted, 
-  onTimeUp,
-  discussionId
+  onTimeUp
 }: TimerProps) {
   useEffect(() => {
     let timer: NodeJS.Timeout;
