@@ -171,7 +171,7 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
                     <ul className="list-disc pl-5 space-y-1">
                       {discussionData.discussion_points.map((point, index) => (
                         <li key={index} className="text-muted-foreground">
-                          {point}
+                          {typeof point === 'string' ? point : point.content}
                         </li>
                       ))}
                     </ul>
