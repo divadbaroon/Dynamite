@@ -160,6 +160,7 @@ export function DiscussionPoints({
         {isCurrentPoint && (
           <>
             <PointTimerDisplay 
+              discussion={discussion}
               discussionPoint={discussion.discussion_points[currentPointIndex]}
               currentPointIndex={currentPointIndex}
               totalPoints={discussion.discussion_points.length}

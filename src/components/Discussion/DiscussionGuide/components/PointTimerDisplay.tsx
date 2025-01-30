@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PointTimerDisplayProps } from '@/types';
 
 export default function PointTimerDisplay({
+  discussion,
   discussionPoint,
   currentPointIndex,
   totalPoints,
@@ -12,16 +13,24 @@ export default function PointTimerDisplay({
   const [width, setWidth] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  const calculateTimeLeft = () => {
+    if (!discussion?.has_launched) return null;
+    
+    const launchTime = new Date(discussion.has_launched).getTime();
+    const pointStartTime = launchTime + (currentPointIndex * discussionPoint.duration * 1000);
+    const currentTime = Date.now();
+    const endTime = pointStartTime + (discussionPoint.duration * 1000);
+    return Math.max(0, Math.floor((endTime - currentTime) / 1000));
+  };
+
   // Initialize timer values
   useEffect(() => {
-    const startTime = new Date(discussionPoint.scheduled_start).getTime();
-    const currentTime = Date.now();
-    const endTime = startTime + (discussionPoint.duration * 1000);
-    const remainingTime = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+    const remainingTime = calculateTimeLeft();
+    if (remainingTime === null) return;
     
     setTimeLeft(remainingTime);
     setWidth((remainingTime / discussionPoint.duration) * 100);
-  }, [discussionPoint]);
+  }, [discussionPoint, discussion?.has_launched, currentPointIndex]);
 
   // Handle point transition
   const handleTimeUp = async () => {
@@ -34,41 +43,46 @@ export default function PointTimerDisplay({
 
   // Timer effect
   useEffect(() => {
-    if (!isRunning || isTransitioning || timeLeft === null) return;
+    if (!isRunning || isTransitioning || timeLeft === null || !discussion?.has_launched) return;
 
-    const timer = setInterval(() => {
-      const startTime = new Date(discussionPoint.scheduled_start).getTime();
-      const currentTime = Date.now();
-      const endTime = startTime + (discussionPoint.duration * 1000);
-      const newTimeLeft = Math.max(0, Math.floor((endTime - currentTime) / 1000));
-
-      if (newTimeLeft <= 0 && !isTransitioning) {
-        handleTimeUp();
-      }
-
-      setTimeLeft(newTimeLeft);
+    // Regular countdown
+    const countdownInterval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [isRunning, isTransitioning, discussionPoint, timeLeft]);
+    // Periodic sync with server time
+    const syncInterval = setInterval(() => {
+      const serverTimeLeft = calculateTimeLeft();
+      if (serverTimeLeft === null) return;
+
+      // Only sync if difference is more than 2 seconds
+      if (Math.abs(serverTimeLeft - (timeLeft || 0)) > 2) {
+        setTimeLeft(serverTimeLeft);
+      }
+
+      if (serverTimeLeft <= 0 && !isTransitioning) {
+        handleTimeUp();
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearInterval(syncInterval);
+    };
+  }, [isRunning, isTransitioning, discussion?.has_launched, currentPointIndex, discussionPoint.duration, timeLeft]);
 
   // Update width based on time left
   useEffect(() => {
     if (timeLeft === null) return;
     setWidth((timeLeft / discussionPoint.duration) * 100);
   }, [timeLeft, discussionPoint.duration]);
-
-  // Reset timer when discussion point changes
-  useEffect(() => {
-    const startTime = new Date(discussionPoint.scheduled_start).getTime();
-    const currentTime = Date.now();
-    const endTime = startTime + (discussionPoint.duration * 1000);
-    const remainingTime = Math.max(0, Math.floor((endTime - currentTime) / 1000));
-    
-    setTimeLeft(remainingTime);
-    setWidth((remainingTime / discussionPoint.duration) * 100);
-    setIsTransitioning(false);
-  }, [discussionPoint]);
 
   const getTimerColor = (percentage: number) => {
     if (percentage > 66) return 'bg-green-500';

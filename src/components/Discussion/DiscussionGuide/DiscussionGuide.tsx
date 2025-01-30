@@ -22,9 +22,9 @@ import {
 
 function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   const [timeLeft, setTimeLeft] = useState(() => {
-    if (!discussion?.created_at) return 600;
+    if (!discussion?.has_launched) return 600;
     
-    const createdAt = new Date(discussion.created_at).getTime();
+    const createdAt = new Date(discussion.has_launched).getTime();
     const currentTime = Date.now();
     const totalTime = discussion.time_left || 600;
     const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
@@ -45,12 +45,12 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
 
   // Calculate point time based on server time
   const [pointTimeLeft, setPointTimeLeft] = useState(() => {
-    if (!discussion?.created_at) return 0;
+    if (!discussion?.has_launched) return 0;
     
     const totalPoints = discussion.discussion_points?.length || 1;
     const totalTimePerPoint = Math.ceil((discussion.time_left || 600) / totalPoints);
     
-    const createdAt = new Date(discussion.created_at).getTime();
+    const createdAt = new Date(discussion.has_launched).getTime();
     const currentTime = Date.now();
     const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
     const currentPointStartTime = currentPointIndex * totalTimePerPoint;
@@ -69,20 +69,22 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
 
   // Timer sync effect
   useEffect(() => {
-    if (!discussion?.created_at || mode !== 'discussion' || !isRunning) return;
+    if (!discussion?.has_launched || mode !== 'discussion' || !isRunning) return;
 
     const syncTimeWithServer = () => {
-      const createdAt = new Date(discussion.created_at).getTime();
+      if (!discussion.has_launched) return; 
+    
+      const launchedAt = new Date(discussion.has_launched).getTime();
       const currentTime = Date.now();
       const totalTime = discussion.time_left || 600;
-      const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
+      const elapsedSeconds = Math.floor((currentTime - launchedAt) / 1000);
       const serverTimeLeft = Math.max(0, totalTime - elapsedSeconds);
-
+    
       // Sync if difference is more than 2 seconds
       if (Math.abs(serverTimeLeft - timeLeft) > 2) {
         setTimeLeft(serverTimeLeft);
       }
-
+    
       // Check if session should be over
       if (serverTimeLeft <= 0) {
         setIsTimeUp(true);
@@ -105,7 +107,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       clearInterval(syncInterval);
       clearInterval(countdownInterval);
     };
-  }, [discussion?.created_at, isRunning, mode, timeLeft]);
+  }, [discussion?.has_launched, isRunning, mode, timeLeft]);
 
   useEffect(() => {
     if (isTimeUp) {

@@ -325,3 +325,65 @@ export async function updateMessageWithAudioAndPoint(
     return { error };
   }
 }
+
+export async function updateHasLaunched(discussionId: string) {
+  try {
+    const supabase = await createClient();
+    
+    const { error } = await supabase
+      .from('sessions')
+      .update({
+        has_launched: new Date().toISOString()
+      })
+      .eq('id', discussionId);
+
+    return { error };
+  } catch (error) {
+    console.error('Error updating has_launched:', error);
+    return { error };
+  }
+}
+
+export async function updateDiscussionPointTimestamps(discussionId: string) {
+  const supabase = await createClient();
+  
+  try {
+    // First get the discussion to access has_launched and points
+    const { data: discussion, error: fetchError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', discussionId)
+      .single();
+
+    if (fetchError || !discussion?.has_launched) throw fetchError;
+
+    // Calculate new point durations and timestamps
+    const pointDuration = Math.ceil(discussion.time_left / discussion.discussion_points.length);
+    const launchTime = new Date(discussion.has_launched);
+    
+    const updatedPoints: DiscussionPoint[] = discussion.discussion_points.map((point: DiscussionPoint, index: number) => {
+      const scheduledStart = new Date(launchTime.getTime() + (index * pointDuration * 1000));
+      
+      return {
+        ...point,
+        scheduled_start: scheduledStart.toISOString(),
+        duration: pointDuration
+      };
+    });
+
+    // Update the discussion with new point timestamps
+    const { error: updateError } = await supabase
+      .from('sessions')
+      .update({
+        discussion_points: updatedPoints
+      })
+      .eq('id', discussionId);
+
+    if (updateError) throw updateError;
+    
+    return { error: null };
+  } catch (error) {
+    console.error('Error updating discussion point timestamps:', error);
+    return { error };
+  }
+}

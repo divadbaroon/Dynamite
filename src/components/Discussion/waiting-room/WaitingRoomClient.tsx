@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DiscussionGuide from '@/components/Discussion/DiscussionGuide/DiscussionGuide';
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { getDiscussionById } from "@/lib/actions/discussion";
+import { createClient } from "@/utils/supabase/client";
+import { getDiscussionById, updateHasLaunched, updateDiscussionPointTimestamps } from "@/lib/actions/discussion";
 import type { Discussion } from '@/types';
 
 interface WaitingRoomClientProps {
@@ -20,30 +21,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
   const [loading, setLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const router = useRouter();
-
-  const checkDiscussionStatus = useCallback(async () => {
-    if (!discussionId || isTransitioning) return;
-
-    try {
-      const { discussion, error } = await getDiscussionById(discussionId);
-      if (error) throw error;
-      if (!discussion) {
-        setError("Session not found");
-        return;
-      }
-
-      setDiscussion(discussion);
-
-      if (discussion.status === 'active') {
-        setIsTransitioning(true);
-        toast.success("Discussion is starting!");
-        router.replace(`/discussion/join/${discussionId}/${groupId}`);
-      }
-    } catch (error) {
-      console.log("Error checking discussion status:", error);
-      setError("Failed to load discussion data");
-    }
-  }, [discussionId, groupId, isTransitioning, router]); // Add dependencies used in the function
+  const supabase = createClient();
 
   useEffect(() => {
     if (!discussionId) {
@@ -52,17 +30,84 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
       return;
     }
 
-    // Initial check
-    checkDiscussionStatus();
-    setLoading(false);
+    // Initial discussion fetch
+    const fetchDiscussion = async () => {
+      try {
+        const { discussion, error } = await getDiscussionById(discussionId);
+        if (error) throw error;
+        if (!discussion) {
+          setError("Session not found");
+          return;
+        }
 
-    // Set up polling every 5 seconds
-    const intervalId = setInterval(checkDiscussionStatus, 5000);
+        setDiscussion(discussion);
+        
+        // If discussion is already active, handle transition
+        if (discussion.status === 'active') {
+          handleDiscussionStart();
+        }
+      } catch (error) {
+        console.log("Error fetching discussion:", error);
+        setError("Failed to load discussion data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Cleanup interval on unmount
-    return () => clearInterval(intervalId);
-  }, [discussionId, groupId, checkDiscussionStatus]);
+    fetchDiscussion();
 
+    // Set up realtime subscription
+    const channel = supabase
+      .channel(`discussion-status-${discussionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sessions',
+          filter: `id=eq.${discussionId}`
+        },
+        async (payload) => {
+          const updatedDiscussion = payload.new as Discussion;
+          setDiscussion(updatedDiscussion);
+
+          if (updatedDiscussion.status === 'active' && !isTransitioning) {
+            handleDiscussionStart();
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [discussionId, groupId, isTransitioning]);
+
+  const handleDiscussionStart = async () => {
+    try {
+      setIsTransitioning(true);
+      
+      // Update has_launched timestamp
+      const { error: launchError } = await updateHasLaunched(discussionId);
+      if (launchError) {
+        console.error("Error updating has_launched:", launchError);
+      }
+  
+      // Update discussion point timestamps
+      const { error: timestampError } = await updateDiscussionPointTimestamps(discussionId);
+      if (timestampError) {
+        console.error("Error updating point timestamps:", timestampError);
+      }
+  
+      toast.success("Discussion is starting!");
+      router.replace(`/discussion/join/${discussionId}/${groupId}`);
+    } catch (error) {
+      console.error("Error during transition:", error);
+      setIsTransitioning(false);
+      toast.error("Failed to join discussion");
+    }
+  };
   if (loading) {
     return (
       <div className="h-[77vh] w-full flex items-center justify-center">

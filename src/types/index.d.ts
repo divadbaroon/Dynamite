@@ -13,6 +13,7 @@ export type Discussion = {
     participant_count?: number
     group_count?: number
     current_point?: number
+    has_launched?: string
   }
 
 export type DiscussionPoint = {
@@ -23,6 +24,7 @@ export type DiscussionPoint = {
 }
 
 export interface PointTimerDisplayProps {
+  discussion: Discussion
   discussionPoint: DiscussionPoint;
   currentPointIndex: number;
   totalPoints: number;
