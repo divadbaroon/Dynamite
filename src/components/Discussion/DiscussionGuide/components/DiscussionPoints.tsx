@@ -2,9 +2,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
-import PointTimerDisplay from './PointTimerDisplay';
+import PointTimerDisplay from './PointTimerDisplay'
 
-import { DiscussionPointsProps } from "@/types"
+import { updateCurrentPoint } from '@/lib/actions/discussion'
+import { DiscussionPointsProps, DiscussionPoint } from "@/types"
 
 export function DiscussionPoints({
   discussion,
@@ -20,9 +21,30 @@ export function DiscussionPoints({
   handleSaveEdit,
   handleDelete,
   handleUndo,
-  pointTimeLeft,
-  currentPointDuration
+  isRunning,
+  setCurrentPointIndex
 }: DiscussionPointsProps) {
+  const handlePointTimeUp = async () => {
+    if (currentPointIndex < discussion.discussion_points.length - 1) {
+      const nextPointIndex = currentPointIndex + 1;
+      
+      try {
+        const { error } = await updateCurrentPoint(discussion.id, nextPointIndex);
+        
+        if (error) {
+          console.error('Error updating current point:', error);
+          return;
+        }
+        
+        // Immediately update local state
+        setCurrentPointIndex(nextPointIndex);
+        setOpenItem(`item-${nextPointIndex}`);
+      } catch (error) {
+        console.error('Error in update operation:', error);
+      }
+    }
+  };
+
   const renderAccordionContent = (index: number) => {
     if (mode === 'waiting-room') return null;
     if (mode === 'usage-check') {
@@ -33,7 +55,6 @@ export function DiscussionPoints({
       );
     }
   
-    // Only get the bullet points for the current discussion point
     const bulletPoints = sharedAnswers[`point${index}`] || [];
     const isCurrentPoint = index === currentPointIndex;
   
@@ -139,10 +160,11 @@ export function DiscussionPoints({
         {isCurrentPoint && (
           <>
             <PointTimerDisplay 
-              pointTimeLeft={pointTimeLeft}
-              totalPoints={discussion.discussion_points.length}
+              discussionPoint={discussion.discussion_points[currentPointIndex]}
               currentPointIndex={currentPointIndex}
-              currentPointDuration={currentPointDuration}
+              totalPoints={discussion.discussion_points.length}
+              isRunning={isRunning}
+              onTimeUp={handlePointTimeUp}
             />
           </>
         )}
@@ -160,7 +182,7 @@ export function DiscussionPoints({
         defaultValue={`item-${currentPointIndex}`} 
         className="w-full"
       >
-        {discussion.discussion_points.map((point: string, index: number) => (
+        {discussion.discussion_points.map((point: DiscussionPoint, index: number) => (
           <AccordionItem 
             key={index} 
             value={`item-${index}`}
@@ -177,7 +199,7 @@ export function DiscussionPoints({
             >
               <div className="flex gap-2">
                 <span className="w-6">{index + 1}.</span>
-                <span>{point}</span>
+                <span>{point.content}</span>
               </div>
             </AccordionTrigger>
             {index === currentPointIndex && (

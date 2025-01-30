@@ -10,7 +10,7 @@ import { Timer } from "./components/Timer"
 import { ReviewDialog } from "./components/ReviewDialog"
 import { DiscussionPoints } from "./components/DiscussionPoints"
 import { HeaderContent } from "./components/HeaderContent"
-import { DiscussionGuideProps, Answers, SharedAnswers, BulletPoint } from "@/types"
+import { DiscussionGuideProps, SharedAnswers, BulletPoint } from "@/types"
 
 import { 
   getDiscussionById,
@@ -21,71 +21,91 @@ import {
 } from '@/lib/actions/discussion'
 
 function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
-  // State declarations remain the same
   const [timeLeft, setTimeLeft] = useState(() => {
-    const savedTime = localStorage.getItem(`${discussion?.id}-timeLeft`);
-    const savedTimestamp = localStorage.getItem(`${discussion?.id}-timerTimestamp`);
+    if (!discussion?.created_at) return 600;
     
-    if (savedTime && savedTimestamp) {
-      const elapsedTime = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
-      const remainingTime = Math.max(0, parseInt(savedTime) - elapsedTime);
-      return remainingTime;
-    }
-    return discussion?.time_left || 600;
+    const createdAt = new Date(discussion.created_at).getTime();
+    const currentTime = Date.now();
+    const totalTime = discussion.time_left || 600;
+    const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
+    const remainingTime = Math.max(0, totalTime - elapsedSeconds);
+    
+    return remainingTime;
   });
   
   const [isRunning, setIsRunning] = useState(discussion?.status === 'active')
   const [loading, setLoading] = useState(true)
-  const [answers] = useState<Answers>(() => {
-    const savedAnswers = localStorage.getItem(`${discussion?.id}-discussionAnswers`);
-    return savedAnswers ? JSON.parse(savedAnswers) : {};
-  });
-  const [sharedAnswers, setSharedAnswers] = useState<SharedAnswers>({});
+  const [sharedAnswers, setSharedAnswers] = useState<SharedAnswers>({})
   const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [isTimeUp, setIsTimeUp] = useState(false)
+  const [isSubmitted] = useState(false)
+  const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null)
+  const [editedContent, setEditedContent] = useState("")
+  const [currentPointIndex, setCurrentPointIndex] = useState(0)
 
-  const [isTimeUp, setIsTimeUp] = useState(() => {
-    return localStorage.getItem(`${discussion?.id}-isTimeUp`) === 'true';
-  });
-  
-  const [ isSubmitted ] = useState(false)
-
-  const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null);
-  const [editedContent, setEditedContent] = useState("");
-
-  const [currentPointIndex, setCurrentPointIndex] = useState(0);
-
+  // Calculate point time based on server time
   const [pointTimeLeft, setPointTimeLeft] = useState(() => {
-    const savedPointTime = localStorage.getItem(`${discussion?.id}-pointTimeLeft`);
-    const savedPointTimestamp = localStorage.getItem(`${discussion?.id}-pointTimerTimestamp`);
+    if (!discussion?.created_at) return 0;
     
-    if (savedPointTime && savedPointTimestamp) {
-      const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
-      const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
-      
-      if (remainingTime === 0) {
-        localStorage.removeItem(`${discussion?.id}-pointTimeLeft`);
-        localStorage.removeItem(`${discussion?.id}-pointTimerTimestamp`);
-        return 0;
-      }
-      
-      return remainingTime;
-    }
+    const totalPoints = discussion.discussion_points?.length || 1;
+    const totalTimePerPoint = Math.ceil((discussion.time_left || 600) / totalPoints);
     
-    const totalTimeInSeconds = discussion?.time_left || 600;
-    const numberOfPoints = discussion?.discussion_points?.length || 1;
-    return Math.ceil(totalTimeInSeconds / numberOfPoints); 
+    const createdAt = new Date(discussion.created_at).getTime();
+    const currentTime = Date.now();
+    const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
+    const currentPointStartTime = currentPointIndex * totalTimePerPoint;
+    
+    return Math.max(0, totalTimePerPoint - (elapsedSeconds - currentPointStartTime));
   });
-  
 
   const [openItem, setOpenItem] = useState<string | undefined>(`item-${currentPointIndex}`);
-
   const [currentPointDuration, setCurrentPointDuration] = useState(() => {
-    const totalTimeInSeconds = discussion?.time_left || 600
-    const numberOfPoints = discussion?.discussion_points?.length || 1
-    return Math.ceil(totalTimeInSeconds / numberOfPoints)
-  })
+    const totalTimeInSeconds = discussion?.time_left || 600;
+    const numberOfPoints = discussion?.discussion_points?.length || 1;
+    return Math.ceil(totalTimeInSeconds / numberOfPoints);
+  });
 
   const supabase = createClient();
+
+  // Timer sync effect
+  useEffect(() => {
+    if (!discussion?.created_at || mode !== 'discussion' || !isRunning) return;
+
+    const syncTimeWithServer = () => {
+      const createdAt = new Date(discussion.created_at).getTime();
+      const currentTime = Date.now();
+      const totalTime = discussion.time_left || 600;
+      const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
+      const serverTimeLeft = Math.max(0, totalTime - elapsedSeconds);
+
+      // Sync if difference is more than 2 seconds
+      if (Math.abs(serverTimeLeft - timeLeft) > 2) {
+        setTimeLeft(serverTimeLeft);
+      }
+
+      // Check if session should be over
+      if (serverTimeLeft <= 0) {
+        setIsTimeUp(true);
+        setIsRunning(false);
+      }
+    };
+
+    // Initial sync
+    syncTimeWithServer();
+
+    // Set up periodic sync
+    const syncInterval = setInterval(syncTimeWithServer, 5000);
+    
+    // Regular countdown
+    const countdownInterval = setInterval(() => {
+      setTimeLeft(prev => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => {
+      clearInterval(syncInterval);
+      clearInterval(countdownInterval);
+    };
+  }, [discussion?.created_at, isRunning, mode, timeLeft]);
 
   useEffect(() => {
     if (isTimeUp) {
@@ -96,31 +116,20 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   // Fetch current discussion effect
   useEffect(() => {
     if (!discussion?.id) return;
-  
+
     const getCurrentDiscussion = async () => {
       try {
         const { discussion: currentDiscussion, error } = await getDiscussionById(discussion.id);
         if (error) throw error;
-  
+
         if (currentDiscussion.current_point !== undefined) {
           setCurrentPointIndex(currentDiscussion.current_point);
           
-          const savedPointTime = localStorage.getItem(`${discussion?.id}-pointTimeLeft`);
-          const savedPointTimestamp = localStorage.getItem(`${discussion?.id}-pointTimerTimestamp`);
+          const totalTimeInSeconds = currentDiscussion.time_left || 600;
+          const numberOfPoints = currentDiscussion.discussion_points?.length || 1;
+          const pointTime = Math.ceil(totalTimeInSeconds / numberOfPoints);
           
-          if (savedPointTime && savedPointTimestamp) {
-            const elapsedTime = Math.floor((Date.now() - parseInt(savedPointTimestamp)) / 1000);
-            const remainingTime = Math.max(0, parseInt(savedPointTime) - elapsedTime);
-            setPointTimeLeft(remainingTime);
-          } else {
-            const totalTimeInSeconds = currentDiscussion.time_left || 600;
-            const numberOfPoints = currentDiscussion.discussion_points?.length || 1;
-            const pointTime = Math.ceil(totalTimeInSeconds / numberOfPoints);
-            
-            setPointTimeLeft(pointTime);
-            localStorage.setItem(`${discussion?.id}-pointTimeLeft`, pointTime.toString());
-            localStorage.setItem(`${discussion?.id}-pointTimerTimestamp`, Date.now().toString());
-          }
+          setPointTimeLeft(pointTime);
         }
       } catch (error) {
         console.log('Error fetching session:', error);
@@ -128,9 +137,9 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
         setLoading(false);
       }
     };
-  
+
     getCurrentDiscussion();
-  
+
     // Keep realtime subscription
     const channel = supabase
       .channel(`session-${discussion.id}`)
@@ -143,21 +152,80 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
           filter: `id=eq.${discussion.id}`
         },
         (payload) => {
-          const updatedDiscusison = payload.new as Discussion;
-          if (!localStorage.getItem(`${discussion?.id}-timeLeft`)) {
-            setTimeLeft(updatedDiscusison.time_left || 600);
+          const updatedDiscussion = payload.new as Discussion;
+          setIsRunning(updatedDiscussion.status === 'active');
+          
+          // Add this new block to handle current_point updates
+          if (updatedDiscussion.current_point !== undefined && 
+              updatedDiscussion.current_point !== currentPointIndex) {
+            setCurrentPointIndex(updatedDiscussion.current_point);
+            setOpenItem(`item-${updatedDiscussion.current_point}`);
+              
+            // Recalculate point time for the new point
+            const totalTimeInSeconds = timeLeft;
+            const remainingPoints = discussion.discussion_points.length - updatedDiscussion.current_point;
+            const newPointTime = Math.ceil(totalTimeInSeconds / remainingPoints);
+            
+            setPointTimeLeft(newPointTime);
+            setCurrentPointDuration(newPointTime);
           }
-          setIsRunning(updatedDiscusison.status === 'active');
         }
       )
       .subscribe();
-  
+
     return () => {
       channel.unsubscribe();
     };
-  }, [discussion?.id]);
+  }, [discussion?.id, currentPointIndex, timeLeft, discussion?.discussion_points?.length]);
 
-  // Fetch shared answers effect
+  // Point timer effect
+  useEffect(() => {
+    const discussionId = discussion?.id;
+    const totalPoints = discussion?.discussion_points?.length ?? 0;
+    
+    if (!isRunning || mode !== 'discussion' || !discussionId) return;
+  
+    const timer = setInterval(async () => {
+      if (pointTimeLeft <= 1) {
+        if (currentPointIndex < totalPoints - 1) {
+          const nextPointIndex = currentPointIndex + 1;
+          
+          try {
+            const { error } = await updateCurrentPoint(discussionId, nextPointIndex);
+            
+            if (!error) {
+              const totalTimeInSeconds = timeLeft;
+              const remainingPoints = totalPoints - nextPointIndex;
+              const newPointTime = Math.ceil(totalTimeInSeconds / remainingPoints);
+  
+              setCurrentPointIndex(nextPointIndex);
+              setOpenItem(`item-${nextPointIndex}`);
+              setPointTimeLeft(newPointTime);
+              setCurrentPointDuration(newPointTime);
+            } else {
+              console.error('Error updating current point:', error);
+            }
+          } catch (error) {
+            console.error('Error in update operation:', error);
+          }
+        }
+      } else {
+        setPointTimeLeft(prev => Math.max(0, prev - 1));
+      }
+    }, 1000);
+  
+    return () => clearInterval(timer);
+  }, [
+    isRunning,
+    mode,
+    pointTimeLeft,
+    currentPointIndex,
+    discussion?.id,
+    discussion?.discussion_points?.length,
+    timeLeft
+  ]);
+
+  // Shared answers effect
   useEffect(() => {
     if (!discussion?.id || !groupId) return;
 
@@ -174,7 +242,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
 
     getSharedAnswers();
 
-    // Keep realtime subscription
     const channel = supabase
       .channel(`shared-answers-${groupId}`)
       .on(
@@ -194,15 +261,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       )
       .subscribe();
 
-        return () => {
-        channel.unsubscribe();
-        };
+    return () => {
+      channel.unsubscribe();
+    };
   }, [discussion?.id, groupId]);
-
-  // Save answers to localStorage effect
-  useEffect(() => {
-    localStorage.setItem(`${discussion?.id}-discussionAnswers`, JSON.stringify(answers));
-  }, [answers]);
 
   useEffect(() => {
     setOpenItem(`item-${currentPointIndex}`);
@@ -249,58 +311,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
       toast.error('Failed to delete bullet point');
     }
   };
-
-  useEffect(() => {
-    // Create stable references to the values we need
-    const discussionId = discussion?.id;
-    const totalPoints = discussion?.discussion_points?.length ?? 0;
-    
-    if (!isRunning || mode !== 'discussion' || !discussionId) return;
-  
-    localStorage.setItem(`${discussionId}-pointTimeLeft`, pointTimeLeft.toString());
-    localStorage.setItem(`${discussionId}-pointTimerTimestamp`, Date.now().toString());
-  
-    const timer = setInterval(async () => {
-      if (pointTimeLeft <= 1) {
-        if (currentPointIndex < totalPoints - 1) {
-          const nextPointIndex = currentPointIndex + 1;
-          
-          try {
-            const { error } = await updateCurrentPoint(discussionId, nextPointIndex);
-            
-            if (!error) {
-              const totalTimeInSeconds = timeLeft;
-              const remainingPoints = totalPoints - nextPointIndex;
-              const newPointTime = Math.ceil(totalTimeInSeconds / remainingPoints);
-  
-              setCurrentPointIndex(nextPointIndex);
-              setOpenItem(`item-${nextPointIndex}`);
-              setPointTimeLeft(newPointTime);
-              setCurrentPointDuration(newPointTime);
-              
-              localStorage.setItem(`${discussionId}-pointTimeLeft`, newPointTime.toString());
-              localStorage.setItem(`${discussionId}-pointTimerTimestamp`, Date.now().toString());
-            } else {
-              console.error('Error updating current point:', error);
-            }
-          } catch (error) {
-            console.error('Error in update operation:', error);
-          }
-        }
-      } else {
-        setPointTimeLeft(prev => Math.max(0, prev - 1));
-      }
-    }, 1000);
-  
-    return () => clearInterval(timer);
-  }, [
-    isRunning,
-    mode,
-    pointTimeLeft,
-    currentPointIndex,
-    discussion?.id,
-    discussion?.discussion_points?.length 
-  ]);
 
   const handleSaveEdit = async (pointIndex: number, bulletIndex: number, newContent: string) => {
     if (!discussion?.id || !groupId) {
@@ -361,7 +371,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     }
   };
 
-  // Rendering logic remains the same
   if (!discussion) {
     return null;
   }
@@ -405,6 +414,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
             discussion={discussion}
             mode={mode}
             currentPointIndex={currentPointIndex}
+            setCurrentPointIndex={setCurrentPointIndex} 
             openItem={openItem}
             setOpenItem={setOpenItem}
             sharedAnswers={sharedAnswers}
@@ -418,6 +428,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
             pointTimeLeft={pointTimeLeft}
             timeLeft={timeLeft}
             currentPointDuration={currentPointDuration}
+            isRunning={isRunning}
           />
         </ScrollArea>
       </CardContent>

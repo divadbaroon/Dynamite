@@ -7,7 +7,7 @@ interface TimerProps {
   mode: string;
   isSubmitted: boolean;
   onTimeUp: () => void;
-  discussionId: string
+  discussionId: string;
 }
 
 export function Timer({ 
@@ -23,18 +23,11 @@ export function Timer({
     let timer: NodeJS.Timeout;
     
     if (isRunning && timeLeft > 0 && mode === 'discussion') {
-      localStorage.setItem(`${discussionId}-timeLeft`, timeLeft.toString());
-      localStorage.setItem(`${discussionId}-timerTimestamp`, Date.now().toString());
-      
       timer = setInterval(() => {
         setTimeLeft((prevTime) => {
           const newTime = Math.max(0, prevTime - 1);
           
-          localStorage.setItem(`${discussionId}-timeLeft`, newTime.toString());
-          localStorage.setItem(`${discussionId}-timerTimestamp`, Date.now().toString());
-          
           if (newTime === 0) {
-            localStorage.setItem(`${discussionId}-isTimeUp`, 'true');
             onTimeUp();
           }
           return newTime;

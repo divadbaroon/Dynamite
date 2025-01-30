@@ -1,25 +1,74 @@
 import React, { useEffect, useState } from 'react';
+import { PointTimerDisplayProps } from '@/types';
 
-interface PointTimerDisplayProps {
-  pointTimeLeft: number
-  currentPointDuration: number
-  totalPoints: number
-  currentPointIndex: number
-}
-
-export default function PointTimerDisplay({ 
-  pointTimeLeft, 
-  currentPointDuration, 
-  totalPoints, 
-  currentPointIndex
+export default function PointTimerDisplay({
+  discussionPoint,
+  currentPointIndex,
+  totalPoints,
+  isRunning,
+  onTimeUp
 }: PointTimerDisplayProps) {
-  const [width, setWidth] = useState(100);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Initialize timer values
   useEffect(() => {
-    // Calculate width based on actual per-point duration
-    const newWidth = (pointTimeLeft / currentPointDuration) * 100;
-    setWidth(Math.max(0, Math.min(100, newWidth)));
-  }, [pointTimeLeft, currentPointDuration]);
+    const startTime = new Date(discussionPoint.scheduled_start).getTime();
+    const currentTime = Date.now();
+    const endTime = startTime + (discussionPoint.duration * 1000);
+    const remainingTime = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+    
+    setTimeLeft(remainingTime);
+    setWidth((remainingTime / discussionPoint.duration) * 100);
+  }, [discussionPoint]);
+
+  // Handle point transition
+  const handleTimeUp = async () => {
+    if (!isTransitioning && onTimeUp) {
+      setIsTransitioning(true);
+      await onTimeUp();
+      setIsTransitioning(false);
+    }
+  };
+
+  // Timer effect
+  useEffect(() => {
+    if (!isRunning || isTransitioning || timeLeft === null) return;
+
+    const timer = setInterval(() => {
+      const startTime = new Date(discussionPoint.scheduled_start).getTime();
+      const currentTime = Date.now();
+      const endTime = startTime + (discussionPoint.duration * 1000);
+      const newTimeLeft = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+
+      if (newTimeLeft <= 0 && !isTransitioning) {
+        handleTimeUp();
+      }
+
+      setTimeLeft(newTimeLeft);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isRunning, isTransitioning, discussionPoint, timeLeft]);
+
+  // Update width based on time left
+  useEffect(() => {
+    if (timeLeft === null) return;
+    setWidth((timeLeft / discussionPoint.duration) * 100);
+  }, [timeLeft, discussionPoint.duration]);
+
+  // Reset timer when discussion point changes
+  useEffect(() => {
+    const startTime = new Date(discussionPoint.scheduled_start).getTime();
+    const currentTime = Date.now();
+    const endTime = startTime + (discussionPoint.duration * 1000);
+    const remainingTime = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+    
+    setTimeLeft(remainingTime);
+    setWidth((remainingTime / discussionPoint.duration) * 100);
+    setIsTransitioning(false);
+  }, [discussionPoint]);
 
   const getTimerColor = (percentage: number) => {
     if (percentage > 66) return 'bg-green-500';
@@ -33,12 +82,22 @@ export default function PointTimerDisplay({
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  if (timeLeft === null || width === null) {
+    return (
+      <div className="bg-gray-50 p-4 rounded-lg mb-6">
+        <div className="flex justify-center items-center h-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 p-4 rounded-lg mb-6">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium">Time Remaining</span>
         <span className={`text-lg font-bold ${width <= 33 ? 'text-red-500' : ''}`}>
-          {formatTime(pointTimeLeft)}
+          {formatTime(timeLeft)}
         </span>
       </div>
       
