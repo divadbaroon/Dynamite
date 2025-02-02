@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner"
 import { Users } from 'lucide-react'
 import { joinOrCreateGroup } from '@/lib/actions/group'
-
+import { getDiscussionById } from '@/lib/actions/discussion'
 import { GroupSelectionClientProps } from "@/types"
   
 export default function GroupSelectionClient({ discussionId }: GroupSelectionClientProps) {
@@ -39,7 +39,21 @@ export default function GroupSelectionClient({ discussionId }: GroupSelectionCli
 
       if (group) {
         toast.success("Successfully joined the group")
-        router.push(`/discussion/join/${discussionId}/${group.id}/waiting-room`)
+
+        // Fetch the discussion data to check its status
+        const { discussion, error: discError } = await getDiscussionById(discussionId)
+        if (discError) {
+          toast.error("Failed to fetch discussion data")
+          return
+        }
+        
+        // If the discussion is active, redirect directly into the session.
+        if (discussion && discussion.status === 'active') {
+          router.push(`/discussion/join/${discussionId}/${group.id}`)
+        } else {
+          // Otherwise, send the user to the waiting room.
+          router.push(`/discussion/join/${discussionId}/${group.id}/waiting-room`)
+        }
       }
     } catch (error) {
       console.log('Error joining group:', error)
