@@ -94,7 +94,7 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
       messages: [
         {
           role: "system",
-          content: `You are analyzing a classroom discussion transcript. Your role is to capture key points while keeping the students' authentic voice:
+          content: `You are analyzing a classroom discussion transcript. Your role is to extract points that directly relate to this discussion topic:
   
                   "${currentDiscussionPoint}"
                   
