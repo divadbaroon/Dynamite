@@ -90,7 +90,7 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
     console.log("5.) Combined transcript", transcript)
      
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
