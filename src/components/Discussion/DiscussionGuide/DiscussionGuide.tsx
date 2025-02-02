@@ -21,49 +21,40 @@ import {
 } from '@/lib/actions/discussion'
 
 function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
-  const [timeLeft, setTimeLeft] = useState(() => {
-    if (!discussion?.has_launched) return 600;
-    
-    const createdAt = new Date(discussion.has_launched).getTime();
-    const currentTime = Date.now();
-    const totalTime = discussion.time_left || 600;
-    const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
-    const remainingTime = Math.max(0, totalTime - elapsedSeconds);
-    
-    return remainingTime;
-  });
   
-  const [isRunning, setIsRunning] = useState(discussion?.status === 'active')
-  const [loading, setLoading] = useState(true)
-  const [sharedAnswers, setSharedAnswers] = useState<SharedAnswers>({})
-  const [isReviewOpen, setIsReviewOpen] = useState(false)
-  const [isTimeUp, setIsTimeUp] = useState(false)
-  const [isSubmitted] = useState(false)
-  const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null)
-  const [editedContent, setEditedContent] = useState("")
-  const [currentPointIndex, setCurrentPointIndex] = useState(0)
+  const [timeLeft, setTimeLeft] = useState<number>(600);
 
-  // Calculate point time based on server time
-  const [pointTimeLeft, setPointTimeLeft] = useState(() => {
-    if (!discussion?.has_launched) return 0;
+  // Recalculate timeLeft whenever discussion.has_launched updates
+  useEffect(() => {
+    if (!discussion?.has_launched) {
+      console.log('No launch time found');
+      setTimeLeft(600);
+      return;
+    }
     
-    const totalPoints = discussion.discussion_points?.length || 1;
-    const totalTimePerPoint = Math.ceil((discussion.time_left || 600) / totalPoints);
-    
-    const createdAt = new Date(discussion.has_launched).getTime();
+    const launchTime = new Date(discussion.has_launched).getTime();
     const currentTime = Date.now();
-    const elapsedSeconds = Math.floor((currentTime - createdAt) / 1000);
-    const currentPointStartTime = currentPointIndex * totalTimePerPoint;
+    const elapsedSeconds = Math.floor((currentTime - launchTime) / 1000);
+    const remainingTime = Math.max(0, 600 - elapsedSeconds);
     
-    return Math.max(0, totalTimePerPoint - (elapsedSeconds - currentPointStartTime));
-  });
+    console.log("Launched Time", launchTime);
+    console.log("Current Time", currentTime);
+    console.log("Elapsed Time", elapsedSeconds);
+    console.log("Remaining Time", remainingTime);
 
+    setTimeLeft(remainingTime);
+  }, [discussion?.has_launched]);
+  
+  const [isRunning, setIsRunning] = useState(discussion?.status === 'active');
+  const [loading, setLoading] = useState(true);
+  const [sharedAnswers, setSharedAnswers] = useState<SharedAnswers>({});
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isSubmitted] = useState(false);
+  const [editingPoint, setEditingPoint] = useState<{ index: number, bulletIndex: number } | null>(null);
+  const [editedContent, setEditedContent] = useState("");
+  const [currentPointIndex, setCurrentPointIndex] = useState(0);
   const [openItem, setOpenItem] = useState<string | undefined>(`item-${currentPointIndex}`);
-  const [currentPointDuration, setCurrentPointDuration] = useState(() => {
-    const totalTimeInSeconds = discussion?.time_left || 600;
-    const numberOfPoints = discussion?.discussion_points?.length || 1;
-    return Math.ceil(totalTimeInSeconds / numberOfPoints);
-  });
 
   const supabase = createClient();
 
@@ -72,21 +63,19 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     if (!discussion?.has_launched || mode !== 'discussion' || !isRunning) return;
 
     const syncTimeWithServer = () => {
-      if (!discussion.has_launched) return; 
+      if (!discussion.has_launched) return;
     
       const launchedAt = new Date(discussion.has_launched).getTime();
       const currentTime = Date.now();
-      const totalTime = discussion.time_left || 600;
       const elapsedSeconds = Math.floor((currentTime - launchedAt) / 1000);
-      const serverTimeLeft = Math.max(0, totalTime - elapsedSeconds);
+      const remainingTime = Math.max(0, 600 - elapsedSeconds);
     
-      // Sync if difference is more than 2 seconds
-      if (Math.abs(serverTimeLeft - timeLeft) > 2) {
-        setTimeLeft(serverTimeLeft);
+      // Only update if the difference is more than 2 seconds
+      if (Math.abs(remainingTime - timeLeft) > 2) {
+        setTimeLeft(remainingTime);
       }
     
-      // Check if session should be over
-      if (serverTimeLeft <= 0) {
+      if (remainingTime <= 0) {
         setIsTimeUp(true);
         setIsRunning(false);
       }
@@ -100,7 +89,14 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     
     // Regular countdown
     const countdownInterval = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 1));
+      setTimeLeft(prev => {
+        const newTime = Math.max(0, prev - 1);
+        if (newTime <= 0) {
+          setIsTimeUp(true);
+          setIsRunning(false);
+        }
+        return newTime;
+      });
     }, 1000);
 
     return () => {
@@ -122,16 +118,11 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     const getCurrentDiscussion = async () => {
       try {
         const { discussion: currentDiscussion, error } = await getDiscussionById(discussion.id);
+        console.log("Discussion from DB:", currentDiscussion);
         if (error) throw error;
 
         if (currentDiscussion.current_point !== undefined) {
           setCurrentPointIndex(currentDiscussion.current_point);
-          
-          const totalTimeInSeconds = currentDiscussion.time_left || 600;
-          const numberOfPoints = currentDiscussion.discussion_points?.length || 1;
-          const pointTime = Math.ceil(totalTimeInSeconds / numberOfPoints);
-          
-          setPointTimeLeft(pointTime);
         }
       } catch (error) {
         console.log('Error fetching session:', error);
@@ -157,19 +148,10 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
           const updatedDiscussion = payload.new as Discussion;
           setIsRunning(updatedDiscussion.status === 'active');
           
-          // Add this new block to handle current_point updates
           if (updatedDiscussion.current_point !== undefined && 
               updatedDiscussion.current_point !== currentPointIndex) {
             setCurrentPointIndex(updatedDiscussion.current_point);
             setOpenItem(`item-${updatedDiscussion.current_point}`);
-              
-            // Recalculate point time for the new point
-            const totalTimeInSeconds = timeLeft;
-            const remainingPoints = discussion.discussion_points.length - updatedDiscussion.current_point;
-            const newPointTime = Math.ceil(totalTimeInSeconds / remainingPoints);
-            
-            setPointTimeLeft(newPointTime);
-            setCurrentPointDuration(newPointTime);
           }
         }
       )
@@ -178,54 +160,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [discussion?.id, currentPointIndex, timeLeft, discussion?.discussion_points?.length]);
-
-  // Point timer effect
-  useEffect(() => {
-    const discussionId = discussion?.id;
-    const totalPoints = discussion?.discussion_points?.length ?? 0;
-    
-    if (!isRunning || mode !== 'discussion' || !discussionId) return;
-  
-    const timer = setInterval(async () => {
-      if (pointTimeLeft <= 1) {
-        if (currentPointIndex < totalPoints - 1) {
-          const nextPointIndex = currentPointIndex + 1;
-          
-          try {
-            const { error } = await updateCurrentPoint(discussionId, nextPointIndex);
-            
-            if (!error) {
-              const totalTimeInSeconds = timeLeft;
-              const remainingPoints = totalPoints - nextPointIndex;
-              const newPointTime = Math.ceil(totalTimeInSeconds / remainingPoints);
-  
-              setCurrentPointIndex(nextPointIndex);
-              setOpenItem(`item-${nextPointIndex}`);
-              setPointTimeLeft(newPointTime);
-              setCurrentPointDuration(newPointTime);
-            } else {
-              console.log('Error updating current point:', error);
-            }
-          } catch (error) {
-            console.log('Error in update operation:', error);
-          }
-        }
-      } else {
-        setPointTimeLeft(prev => Math.max(0, prev - 1));
-      }
-    }, 1000);
-  
-    return () => clearInterval(timer);
-  }, [
-    isRunning,
-    mode,
-    pointTimeLeft,
-    currentPointIndex,
-    discussion?.id,
-    discussion?.discussion_points?.length,
-    timeLeft
-  ]);
+  }, [discussion?.id, currentPointIndex]);
 
   // Shared answers effect
   useEffect(() => {
@@ -373,9 +308,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
     }
   };
 
-  if (!discussion) {
-    return null;
-  }
+  if (!discussion) return null;
 
   const getCardHeight = () => {
     switch (mode) {
@@ -399,9 +332,7 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
   return (
     <Card className={`w-full ${getCardHeight()} flex flex-col`}>
       <CardHeader className="flex-shrink-0 space-y-2">
-        <CardTitle className="text-2xl font-bold text-center">
-          Discussion Guide
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Discussion Guide</CardTitle>
         <Separator />
       </CardHeader>
 
@@ -427,9 +358,6 @@ function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
             handleSaveEdit={handleSaveEdit}
             handleDelete={handleDelete}
             handleUndo={handleUndo}
-            pointTimeLeft={pointTimeLeft}
-            timeLeft={timeLeft}
-            currentPointDuration={currentPointDuration}
             isRunning={isRunning}
           />
         </ScrollArea>
