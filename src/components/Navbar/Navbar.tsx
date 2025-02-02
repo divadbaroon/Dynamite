@@ -22,7 +22,7 @@ const Navbar = ({ user }: NavbarProps) => {
   const pathname = usePathname();
   
   // Check if current path is a discussion page that should hide menu items
-  const isDiscussionPage = /^\/discussion\/(join|\d+)/.test(pathname);
+  const isDiscussionPage = /^\/(?:discussion\/(join|\d+)|feedback\/[^\/]+\/[^\/]+)/.test(pathname);
 
   return (
     <nav className="bg-white shadow-md w-full sticky top-0 z-50">
@@ -71,7 +71,7 @@ const Navbar = ({ user }: NavbarProps) => {
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                         <Avatar className="h-8 w-8">
-                        <AvatarImage src="/api/placeholder/32/32" />
+                        <AvatarImage src="/assets/Icons/accountIcon.png" />
                         <AvatarFallback>
                             <UserIcon className="h-4 w-4 text-black" />
                         </AvatarFallback>
@@ -167,7 +167,7 @@ const Navbar = ({ user }: NavbarProps) => {
                   <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                       <Avatar className="h-8 w-8">
-                      <AvatarImage src="/api/placeholder/32/32" />
+                      <AvatarImage src="/assets/Icons/accountIcon.png" />
                       <AvatarFallback>
                           <UserIcon className="h-4 w-4 text-black" />
                       </AvatarFallback>
