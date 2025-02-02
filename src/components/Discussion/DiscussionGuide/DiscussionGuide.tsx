@@ -16,8 +16,7 @@ import {
   getDiscussionById,
   fetchSharedAnswers,
   deleteAnswerPoint,
-  saveAnswerEdit,
-  updateCurrentPoint
+  saveAnswerEdit
 } from '@/lib/actions/discussion'
 
 function DiscussionGuide({ discussion, mode, groupId }: DiscussionGuideProps) {
