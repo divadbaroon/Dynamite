@@ -95,44 +95,35 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
         {
           role: "system",
           content: `You are analyzing a classroom discussion transcript. Your role is to extract points that directly relate to this discussion topic:
-  
-                  "${currentDiscussionPoint}"
-                  
-                  Key Requirements:
-                  1. Summarize ideas coherently while keeping student language style
-                  2. Do not repeat/ rephrase points already present
-                  3. Only include points clearly present in the transcript
-                  4. Keep the casual, natural way students express themselves
-                  5. Never add points similar to existing ones
-                  6. Combine related ideas from the same discussion thread
-                  
-                  Guidelines for point creation:
-                  - Light summarization is okay to make points clearer
-                  - Keep student phrases and vocabulary when combining ideas
-                  - Each point should sound like something a student would say
-                  - Avoid formal or academic language
-                  - Keep points under 100 characters
-                  - Skip points similar to existing ones
-                  
-                  Examples of good summarization:
-                  Original: "Like, I think that, um, when we use too much plastic and stuff, it goes into the ocean and then, you know, the fish eat it and that's really bad for them"
-                  Good point: "Plastic in oceans is bad cause fish eat it and get hurt"
-                  Bad point: "Marine ecosystem degradation due to plastic pollution" (too formal)
-                  
-                  Original: "I was thinking maybe if we, like, used paper bags instead of plastic ones, and then also like brought our own bags to the store, that would help a lot with the plastic problem"
-                  Good point: "Using paper bags and bringing our own bags helps with plastic"
-                  Bad point: "Implementation of sustainable shopping practices" (not student voice)
-                  
-                  Remember:
-                  1. Check all existing points to avoid duplicates
-                  2. Only combine ideas that are clearly related
-                  3. Keep the natural flow of student speech
-                  4. Make it sound like students talking to other students
-                  
-                  Return the response as a JSON object with this structure:
-                  {
-                    "points": ["point 1 from transcript", "point 2 from transcript"]
-                  }`
+
+          "${currentDiscussionPoint}"
+
+          Key Requirements:
+          1. Only include points that directly connect to the discussion topic
+          2. Keep the students' natural speaking style
+          3. Skip any points that aren't clearly related to the topic
+          4. Combine related ideas from the same thread if they connect to the topic
+
+          Guidelines:
+          - Each point should sound like authentic student speech
+          - Keep points under 100 characters
+          - Skip off-topic or tangential points
+          - Light summarization is okay but maintain student vocabulary
+
+          Example:
+          Discussion Topic: "How does plastic affect ocean animals?"
+
+          Original student comment: "I think plastic is bad for the environment and also like we should use less paper and maybe turn off lights when we leave rooms"
+          Good point: "Plastic is bad for the environment" (related to topic)
+          Skip: "Turn off lights when leaving rooms" (off-topic)
+
+          Original student comment: "The turtles get stuck in those plastic rings from soda cans and like they can't swim properly and stuff"
+          Good point: "Turtles get stuck in plastic rings and can't swim"
+
+          Return the response as a JSON object:
+          {
+            "points": ["point 1 from transcript", "point 2 from transcript"]
+          }`
         },
         {
           role: "user",
