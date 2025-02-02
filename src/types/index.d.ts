@@ -186,9 +186,6 @@ export interface DiscussionPointsProps {
   handleSaveEdit: (index: number, bulletIndex: number, content: string) => void;
   handleDelete: (index: number, bulletIndex: number) => void;
   handleUndo: (index: number, bulletIndex: number) => void;  
-  pointTimeLeft: number;
-  timeLeft: number;
-  currentPointDuration: number;
   isRunning: boolean;
 }
 
