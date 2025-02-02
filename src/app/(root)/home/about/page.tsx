@@ -15,7 +15,7 @@ export default function TeamPage() {
       <div className="max-w-4xl mx-auto"> 
         <h1 className="text-4xl font-bold mb-4">Our team</h1>
         <p className="text-lg mb-8">
-          EthicConvo is a platform developed by a dedicated group of researchers, instructors, student designers, and student
+          Dynamite is a platform developed by a dedicated group of researchers, instructors, student designers, and student
           engineers from institutions like Virginia Tech, University of Virginia, University of Washington, and more, all
           united by a passion for transforming education. Our platform is designed to help instructors conduct dynamic in-
           class coding exercises that engage students in meaningful peer interactions while providing deep insights into

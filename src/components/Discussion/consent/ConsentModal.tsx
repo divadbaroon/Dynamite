@@ -32,7 +32,7 @@ const ConsentModal = ({
   const content = (
     <Card className="w-full max-w-4xl shadow-lg border-t-4 border-t-primary">
       <CardHeader className="text-center space-y-2 pb-2">
-        <CardTitle className="text-4xl font-bold text-primary">Welcome to EthicConvo</CardTitle>
+        <CardTitle className="text-4xl font-bold text-primary">Welcome to Dynamite</CardTitle>
         <p className="text-muted-foreground text-lg">Please review the information below and provide your consent to participate.</p>
       </CardHeader>
       
@@ -41,10 +41,10 @@ const ConsentModal = ({
           <div className="bg-primary/5 p-6 rounded-lg my-6 border border-primary/10 shadow-sm">
             <h3 className="text-2xl font-semibold mb-3 text-primary flex items-center">
               <Info className="mr-2 h-6 w-6" />
-              What is EthicConvo?
+              What is Dynamite?
             </h3>
             <p className="text-lg leading-relaxed">
-              EthicConvo facilitates real-time collaboration, discussion, and problem-solving 
+              Dynamite facilitates real-time collaboration, discussion, and problem-solving 
               among students, going beyond traditional assignments to reveal critical aspects 
               of students`&apos;` mental models, teamwork skills, and learning progress.
             </p>
@@ -111,7 +111,7 @@ const ConsentModal = ({
             </h3>
             <p className="text-lg leading-relaxed">
               For questions or concerns about this platform, please contact your instructor 
-              or the EthicConvo support team (<a href="mailto:dbarron410@vt.edu" className="text-primary underline">dbarron410@vt.edu</a>).
+              or the Dynamite support team (<a href="mailto:dbarron410@vt.edu" className="text-primary underline">dbarron410@vt.edu</a>).
             </p>
           </div>
         </section>

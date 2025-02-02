@@ -24,7 +24,7 @@ const EthicConvo: React.FC<EthicConvoProps> = ({ className }) => {
         textAnchor="middle"
         fill="currentColor"
       >
-        EthicConvo
+        Dynamite
       </text>
     </svg>
   );

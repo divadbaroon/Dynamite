@@ -6,11 +6,11 @@ const Homepage = () => {
     <div className="min-h-screen bg-white">
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto"> 
-          <h1 className="text-4xl font-bold mb-6">Welcome to EthicConvo</h1>
+          <h1 className="text-4xl font-bold mb-6">Welcome to Dynamite</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-8">
             <div className="flex-grow">
               <p className="text-lg">
-                Our platform EthicConvo is designed to help
+                Our platform Dynamite is designed to help
                 instructors conduct dynamic in-class coding exercises that not only
                 engage students in meaningful peer interactions but also provide deep
                 insights into their cognitive processes and understanding of programming
@@ -23,7 +23,7 @@ const Homepage = () => {
             <Card className="bg-blue-100 flex-shrink-0 w-full md:w-64">
               <CardContent className="p-6 flex flex-col items-center justify-center h-full">
                 <h2 className="text-4xl font-bold mb-2">2586</h2>
-                <p className="text-lg text-center">Students Engaged in EthicConvo-Powered Discussions</p>
+                <p className="text-lg text-center">Students Engaged in Dynamite-Powered Discussions</p>
               </CardContent>
             </Card>
           </div>
