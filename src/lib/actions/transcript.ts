@@ -98,17 +98,12 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
 
           "${currentDiscussionPoint}"
 
-          Key Requirements:
+          Requirements (You must follow these when generating points):
           1. Only include points that directly connect to the discussion topic
-          2. Keep the students' natural speaking style
-          3. Skip any points that aren't clearly related to the topic
-          4. Combine related ideas from the same thread if they connect to the topic
-
-          Guidelines:
-          - Each point should sound like authentic student speech
-          - Keep points under 100 characters
-          - Skip off-topic or tangential points
-          - Light summarization is okay but maintain student vocabulary
+          2. Do not include points that have already been mentioned
+          3. Keep the students' natural speaking style
+          4. Skip any points that aren't clearly related to the topic
+          5. Combine related ideas from the same thread if they connect to the topic
 
           Example:
           Discussion Topic: "How does plastic affect ocean animals?"
