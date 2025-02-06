@@ -1,4 +1,4 @@
-import { DiscussionContent } from "./DiscussionContent"
+import { DiscussionContent } from "@/components/Discussion/content/DiscussionContent"
 
 type Params = Promise<{ discussionId: string }>;
 
