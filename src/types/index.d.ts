@@ -263,3 +263,12 @@ export interface EditingPoint {
   index: number
   bulletIndex: number
 }
+
+export interface WaitingRoomClientProps {
+  discussionId: string;
+  groupId: string;
+}
+
+export interface WaitingRoomGuideProps {
+  discussion: Discussion | null;
+}

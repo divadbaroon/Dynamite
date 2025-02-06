@@ -1,15 +1,10 @@
 import React from 'react';
-import type { Discussion } from '@/types';
+import type { WaitingRoomGuideProps } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface WaitingRoomGuideProps {
-  discussion: Discussion | null;
-  groupId: string;
-}
-
-export default function WaitingRoomGuide({ discussion, groupId }: WaitingRoomGuideProps) {
+export default function WaitingRoomGuide({ discussion }: WaitingRoomGuideProps) {
   if (!discussion) return null;
 
   return (

@@ -8,12 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { getDiscussionById, updateHasLaunched, updateDiscussionPointTimestamps } from "@/lib/actions/discussion";
-import type { Discussion } from '@/types';
-
-interface WaitingRoomClientProps {
-  discussionId: string;
-  groupId: string;
-}
+import type { Discussion, WaitingRoomClientProps } from '@/types';
 
 export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoomClientProps) {
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
@@ -147,7 +142,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
           <Card className="h-full">
             <CardContent className="h-full p-0">
               <ScrollArea className="h-full px-0">
-                <WaitingRoomGuide discussion={discussion} groupId={groupId}/>
+                <WaitingRoomGuide discussion={discussion} />
               </ScrollArea>
             </CardContent>
           </Card>

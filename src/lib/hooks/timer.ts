@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { Discussion, UseTimerProps } from '@/types'
+import type { UseTimerProps } from '@/types'
 
 export function useTimer({ discussion, mode, isRunning, onTimeUp }: UseTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(600)
