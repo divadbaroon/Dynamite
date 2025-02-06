@@ -22,7 +22,7 @@ const Navbar = ({ user }: NavbarProps) => {
   const pathname = usePathname();
   
   // Check if current path is a discussion page that should hide menu items
-  const isDiscussionPage = /^\/(?:discussion\/(join|\d+)|feedback\/[^\/]+\/[^\/]+)/.test(pathname);
+  const isDiscussionPage = /^\/(?:discussion\/(join|\d+)|feedback\/[^\/]+\/[^\/]+)/.test(pathname || '')
 
   return (
     <nav className="bg-white shadow-md w-full sticky top-0 z-50">
