@@ -8,7 +8,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-export async function analyzeTranscript(groupId: string, sessionId: string) {
+import stringSimilarity from 'string-similarity';
+
+function isTooSimilar(newPoint: string, existingPoints: string[], similarityThreshold: number = 0.7): boolean {
+  return existingPoints.some(existing => {
+    const similarity = stringSimilarity.compareTwoStrings(newPoint.toLowerCase(), existing.toLowerCase());
+    return similarity >= similarityThreshold;
+  });
+}
+
+export async function analyzeTranscript(sessionId: string, groupId: string) {
   const supabase = await createClient()
 
   try {
@@ -18,7 +27,7 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
         .from('sessions')
         .select('discussion_points, current_point')
         .eq('id', sessionId)
-        .single(),
+        .maybeSingle(),
       
       supabase
         .from('messages')
@@ -31,10 +40,8 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
         .select('answers')
         .eq('session_id', sessionId)
         .eq('group_id', groupId)
-        .single()
+        .maybeSingle()
     ]);
-
-    console.log("1.) Session data", sessionResponse.data)
 
     if (sessionResponse.error) {
       console.log('Session error:', sessionResponse.error)
@@ -42,20 +49,43 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
     }
 
     const session = sessionResponse.data
-    if (!session?.discussion_points || !Array.isArray(session.discussion_points)) {
-      throw new Error('Discussion points not found or invalid format')
+    if (!session) {
+      console.log('Session not found')
+      return { 
+        success: false, 
+        error: 'Session not found or not initialized' 
+      }
+    }
+
+    if (!session.discussion_points) {
+      console.log('No discussion points available')
+      return { 
+        success: false, 
+        error: 'No discussion points available yet' 
+      }
+    }
+
+    if (!Array.isArray(session.discussion_points)) {
+      console.log('Discussion points is not an array')
+      return {
+        success: false,
+        error: 'Discussion points are not in the correct format'
+      }
+    }
+
+    if (!session.discussion_points[session.current_point]) {
+      console.log('Current discussion point not found')
+      return {
+        success: false,
+        error: 'No current discussion point available'
+      }
     }
 
     const currentDiscussionPoint = session.discussion_points[session.current_point]
-
-    console.log("2.) Current Discussion Point", currentDiscussionPoint)
-    
-    if (!currentDiscussionPoint) {
-      throw new Error('Current discussion point not found')
-    }
+    console.log("1.) Current Discussion Point", currentDiscussionPoint)
 
     const messages = messagesResponse.data?.filter(msg => msg.current_point === session.current_point) || []
-    console.log("3.) All message from discussion point", messages)
+    console.log("2.) All message from discussion point", messages)
 
     if (messagesResponse.error) {
       console.log('Messages error:', messagesResponse.error)
@@ -66,28 +96,47 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
       return { success: false, error: 'No messages found for current discussion point' }
     }
 
-    if (answersResponse.error && answersResponse.error.code !== 'PGRST116') {
-      console.log('Error fetching current answers:', answersResponse.error)
-      throw answersResponse.error
+    let currentAnswers = answersResponse.data?.answers || {}
+    const currentPointKey = `point${session.current_point}` as keyof SharedAnswers
+    
+    if (!answersResponse.data) {
+      currentAnswers = {
+        [currentPointKey]: []
+      }
+
+      const { error: initError } = await supabase
+        .from('shared_answers')
+        .insert({
+          session_id: sessionId,
+          group_id: groupId,
+          answers: currentAnswers,
+          last_updated: new Date().toISOString()
+        });
+
+      if (initError) {
+        console.log('Error initializing shared answers:', initError)
+        throw initError
+      }
+
+      console.log('Initialized shared answers:', currentAnswers)
     }
 
-    // Get current point's bullets (including deleted ones)
-    const currentPointKey = `point${session.current_point}` as keyof SharedAnswers
-    const currentBullets = answersResponse.data?.answers ? 
-      (answersResponse.data.answers as SharedAnswers)[currentPointKey] || [] : 
-      [];
-
-    // Get all points (including deleted ones) to show to GPT, just exclude "(None)"
+    const currentBullets = (currentAnswers[currentPointKey] as any[]) || []
     const existingPoints = currentBullets
       .filter(bullet => bullet.content !== "(None)")
       .map(bullet => bullet.content);
 
-    console.log("4.) All existing bullet points", existingPoints)
+    console.log("3.) All existing bullet points", existingPoints)
 
-    // Query GPT with the current discussion point and transcript
-    const transcript = messages.map(m => m.content).join('\n')
+    const transcript = messages
+      .map((m, index) => {
+        const messageNumber = index + 1;
+        const timestamp = new Date(m.created_at).toLocaleTimeString();
+        return `Message ${messageNumber} [${timestamp}]:\n${m.content.trim()}`
+      })
+      .join('\n\n---\n\n');
 
-    console.log("5.) Combined transcript", transcript)
+    console.log("4.) Combined transcript", transcript)
      
     console.log("Starting gpt analysis")
 
@@ -141,30 +190,29 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
       throw new Error('No content received from OpenAI')
     }
 
-    console.log("Recieved from gpt: ", content)
+    console.log("Received from gpt: ", content)
 
-    // Parse the response and get new points
     const aiResponse = JSON.parse(content)
-
     console.log('AI response: ', aiResponse)
 
-    const newPoints = aiResponse.points || []
+    // Filter out new points that are too similar to existing ones
+    const newPoints = (aiResponse.points || []).filter((point: string) => 
+      !isTooSimilar(point, existingPoints)
+    )
 
-    console.log("6.) new bullet points from GPT", newPoints)
+    console.log("6.) new bullet points from GPT (after similarity check)", newPoints)
      
-    // Preserve all existing bullets and add new ones
     const updatedAnswers = {
-      ...answersResponse.data?.answers
+      ...currentAnswers
     }
 
     updatedAnswers[currentPointKey] = [
-      ...currentBullets,  // Keep all existing bullets with their original state
+      ...currentBullets,
       ...newPoints.map((content: string) => ({ content, isDeleted: false }))
     ]
 
-    console.log("7.) Final updated bullet points", newPoints)
+    console.log("7.) Final updated bullet points", updatedAnswers[currentPointKey])
 
-    // Update the shared answers in the database
     const { error: upsertError } = await supabase
       .from('shared_answers')
       .upsert({
