@@ -16,6 +16,10 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     const [currentPointIndex, setCurrentPointIndex] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
     const [openItem, setOpenItem] = useState<string>(`item-${currentPointIndex}`)
+    const [isTimeUp, setIsTimeUp] = useState<boolean>(false)
+    
+    // Call the hook at the top level
+    const { analyzeTranscript } = useTranscriptAnalysis();
     
     // Properly destructure the hook's return values
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
@@ -62,8 +66,30 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         setOpenItem
     })
 
-    // Transcript analysis interval (every 10 seconds)
-    useTranscriptAnalysis(discussion?.id, groupId)
+    // Only run transcript analysis when discussion is active
+    useEffect(() => {
+        let analysisInterval: NodeJS.Timeout | null = null;
+        
+        if (discussion?.id && groupId && !isTimeUp) {
+            // Start transcript analysis
+            const startAnalysis = async () => {
+                await analyzeTranscript(discussion.id, groupId);
+            };
+            
+            // Initial analysis
+            startAnalysis();
+            
+            // Set up interval (every 10 seconds) only if discussion is active
+            analysisInterval = setInterval(startAnalysis, 10000);
+        }
+
+        // Cleanup function
+        return () => {
+            if (analysisInterval) {
+                clearInterval(analysisInterval);
+            }
+        };
+    }, [discussion?.status, discussion?.id, groupId, analyzeTranscript]);
 
     // Handler for setOpenItem that matches DiscussionGuideProps signature
     const handleSetOpenItem = (item: string | undefined) => {
@@ -100,15 +126,18 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     isRunning={isRunning}
                     openItem={openItem}
                     loading={loading}
+                    isTimeUp={isTimeUp}
                     setCurrentPointIndex={setCurrentPointIndex}
                     setIsRunning={setIsRunning}
                     setOpenItem={handleSetOpenItem}
+                    setIsTimeUp={setIsTimeUp}
                 />
             </div>
             <div className="flex-1 p-4 overflow-hidden">
                 <ChatWindow 
                     groupId={groupId} 
                     discussionId={discussionId}
+                    isTimeUp={isTimeUp}
                 />
             </div>
         </div>
