@@ -1,23 +1,18 @@
-import { useEffect } from 'react'
-import { analyzeTranscript } from '@/lib/actions/transcript'
+"use client"
 
-export function useTranscriptAnalysis(discussionId: string | undefined, groupId: string) {
-  useEffect(() => {
-    if (!discussionId || !groupId) return
+import { useCallback } from 'react';
+import { analyzeTranscript as analyzeTranscriptAction } from '@/lib/actions/transcript'; 
 
-    const runAnalysis = async () => {
-      try {
-        const result = await analyzeTranscript(groupId, discussionId)
-        console.log('Transcript analysis result:', result)
-        if (!result.success) {
-          console.log('Transcript analysis failed:', result.error)
-        }
-      } catch (error) {
-        console.log('Error running transcript analysis:', error)
-      }
+export function useTranscriptAnalysis() {
+  const analyzeTranscript = useCallback(async (discussionId: string, groupId: string) => {
+    try {
+      const result = await analyzeTranscriptAction(discussionId, groupId);
+      return result;
+    } catch (error) {
+      console.error('Error in transcript analysis:', error);
+      throw error;
     }
+  }, []);
 
-    const intervalId = setInterval(runAnalysis, 1 * 10 * 1000)
-    return () => clearInterval(intervalId)
-  }, [discussionId, groupId])
+  return { analyzeTranscript };
 }
