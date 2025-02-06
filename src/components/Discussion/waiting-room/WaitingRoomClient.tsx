@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import DiscussionGuide from '@/components/Discussion/discussion-guide/DiscussionGuide';
+import WaitingRoomGuide from '@/components/Discussion/waiting-room/WaitingRoomDisucussionGuide'
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -147,7 +147,7 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
           <Card className="h-full">
             <CardContent className="h-full p-0">
               <ScrollArea className="h-full px-0">
-                <DiscussionGuide discussion={discussion} mode="waiting-room" groupId={groupId}/>
+                <WaitingRoomGuide discussion={discussion} groupId={groupId}/>
               </ScrollArea>
             </CardContent>
           </Card>
