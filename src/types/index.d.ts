@@ -46,6 +46,11 @@ export interface JoinDiscussionClientProps {
   discussionId: string;
 }
 
+export interface UseDiscussionProps {
+  discussionId?: string
+  setCurrentPointIndex: (index: number) => void
+}
+
 export interface ConsentPageProps {
   discussionId: string
   onAccountCreated: () => void
@@ -87,20 +92,27 @@ export interface DiscussionClientProps {
   groupId: string;
 }
 
-export interface DiscussionGuideProps {
-  discussion: Discussion | null;
-  groupId: string;
-}
-
 export interface ChatWindowProps {
   groupId: string;
   discussionId: string;
 }
 
 export interface DiscussionGuideProps {
-  discussion: Discussion | null;
-  mode: 'usage-check' | 'waiting-room' | 'discussion';
-  groupId: string;
+  discussion: Discussion | null
+  mode: 'discussion' | 'waiting-room'
+  groupId: string
+  sharedAnswers: SharedAnswers
+  currentPointIndex: number
+  isRunning: boolean
+  openItem: string
+  loading: boolean
+  setCurrentPointIndex: (index: number) => void
+  setIsRunning: (isRunning: boolean) => void
+  setOpenItem: (item: string | undefined) => void
+}
+
+export interface EditingPoint {
+  index: number
 }
 
 export interface Answers {
@@ -219,4 +231,35 @@ export interface Ratings {
 export interface StarRatingProps {
   name: string
   onChange: (rating: number) => void
+}
+
+// Chat
+
+export interface UseChatActionsProps {
+  user: SupabaseUser | null
+  userData: UserData | null
+  hasConsented: boolean | null
+  discussionId: string
+  groupId: string
+  setNewMessage: (message: string) => void
+}
+
+export interface UseSessionSubscriptionProps {
+  sessionId?: string  
+  currentPointIndex: number
+  setIsRunning: (isRunning: boolean) => void
+  setCurrentPointIndex: (index: number) => void
+  setOpenItem: (item: string) => void
+}
+
+export interface UseTimerProps {
+  discussion: Discussion | null 
+  mode: string
+  isRunning: boolean
+  onTimeUp?: () => void
+}
+
+export interface EditingPoint {
+  index: number
+  bulletIndex: number
 }
