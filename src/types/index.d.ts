@@ -95,6 +95,7 @@ export interface DiscussionClientProps {
 export interface ChatWindowProps {
   groupId: string;
   discussionId: string;
+  isTimeUp: boolean;
 }
 
 export interface DiscussionGuideProps {
@@ -105,10 +106,12 @@ export interface DiscussionGuideProps {
   currentPointIndex: number
   isRunning: boolean
   openItem: string
-  loading: boolean
+  loading?: boolean
+  isTimeUp: boolean
   setCurrentPointIndex: (index: number) => void
   setIsRunning: (isRunning: boolean) => void
   setOpenItem: (item: string | undefined) => void
+  setIsTimeUp: (isTimeUp: boolean) => void
 }
 
 export interface EditingPoint {
@@ -164,6 +167,7 @@ export interface AudioInputProps {
   userId: string;
   discussionId: string;
   disabled?: boolean;
+  isTimeUp?: boolean;
 }
 
 // ====== WAITING-ROOM PAGE
