@@ -151,18 +151,20 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
       messages: [
         {
           role: "system",
-          content: `You are analyzing a classroom discussion transcript. 
+          content: `You are analyzing NEW messages from a classroom discussion transcript. 
           
           DISCUSSION TOPIC: "${currentDiscussionPoint}"
           
-          TASK: Extract key points that directly relate to the discussion topic above.
+          TASK: Extract key points ONLY from the new messages that have been added since the last update.
           
           REQUIREMENTS:
           1. RELEVANCE: Only include points that directly connect to the discussion topic
-          2. UNIQUENESS: Do not duplicate or rephrase points that were already mentioned
+          2. UNIQUENESS: Do not analyze or rephrase ANY existing points - focus ONLY on new content
           3. CONCISENESS: Capture the core idea while preserving student's voice
           4. FOCUS: Skip any off-topic or tangential points
           5. SYNTHESIS: Combine related ideas from the same student if they connect
+          
+          CRITICAL: You are ONLY analyzing new messages. The existing points are provided for context only - do NOT include them in your analysis or rephrase them. If no new unique points are found, return an empty array.
           
           EXAMPLES:
           Topic: "How does plastic affect ocean animals?"
@@ -187,11 +189,13 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
           role: "user",
           content: `Current discussion topic: ${currentDiscussionPoint}
                   
-          Existing points (DO NOT duplicate or rephrase these): 
+          EXISTING POINTS (These are already captured - DO NOT analyze or rephrase these):
           ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
                   
-          Discussion transcript:
-          ${transcript}`
+          NEW MESSAGES TO ANALYZE (Messages since last update):
+          ${transcript}
+          
+          IMPORTANT: Only analyze the new messages above. If you find no new unique points that aren't already in the existing points list, return an empty array.`
         }
       ],
       response_format: { type: "json_object" }
