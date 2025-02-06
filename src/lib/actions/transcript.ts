@@ -37,7 +37,7 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
       
       supabase
         .from('shared_answers')
-        .select('answers')
+        .select('answers, last_updated')
         .eq('session_id', sessionId)
         .eq('group_id', groupId)
         .maybeSingle()
@@ -84,8 +84,14 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
     const currentDiscussionPoint = session.discussion_points[session.current_point]
     console.log("1.) Current Discussion Point", currentDiscussionPoint)
 
-    const messages = messagesResponse.data?.filter(msg => msg.current_point === session.current_point) || []
-    console.log("2.) All message from discussion point", messages)
+    // Filter messages by current point and last update time
+    const lastUpdated = answersResponse.data?.last_updated
+    const messages = messagesResponse.data?.filter(msg => {
+      return msg.current_point === session.current_point && 
+             (!lastUpdated || new Date(msg.created_at) > new Date(lastUpdated))
+    }) || []
+    
+    console.log("2.) New messages since last update", messages)
 
     if (messagesResponse.error) {
       console.log('Messages error:', messagesResponse.error)
@@ -93,7 +99,7 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
     }
 
     if (!messages?.length) {
-      return { success: false, error: 'No messages found for current discussion point' }
+      return { success: false, error: 'No new messages found since last update' }
     }
 
     let currentAnswers = answersResponse.data?.answers || {}
@@ -136,7 +142,7 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
       })
       .join('\n\n---\n\n');
 
-    console.log("4.) Combined transcript", transcript)
+    console.log("4.) Combined transcript of new messages", transcript)
      
     console.log("Starting gpt analysis")
 
@@ -145,30 +151,36 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
       messages: [
         {
           role: "system",
-          content: `You are analyzing a classroom discussion transcript. Your role is to extract points that directly relate to this discussion topic:
-
-          "${currentDiscussionPoint}"
-
-          Requirements (You must follow these when generating points):
-          1. Only include points that directly connect to the discussion topic
-          2. Do not include points that have already been mentioned
-          3. Keep the students' natural speaking style
-          4. Skip any points that aren't clearly related to the topic
-          5. Combine related ideas from the same thread if they connect to the topic
-
-          Example:
-          Discussion Topic: "How does plastic affect ocean animals?"
-
-          Original student comment: "I think plastic is bad for the environment and also like we should use less paper and maybe turn off lights when we leave rooms"
-          Good point: "Plastic is bad for the environment" (related to topic)
-          Skip: "Turn off lights when leaving rooms" (off-topic)
-
-          Original student comment: "The turtles get stuck in those plastic rings from soda cans and like they can't swim properly and stuff"
-          Good point: "Turtles get stuck in plastic rings and can't swim"
-
-          Return the response as a JSON object:
+          content: `You are analyzing a classroom discussion transcript. 
+          
+          DISCUSSION TOPIC: "${currentDiscussionPoint}"
+          
+          TASK: Extract key points that directly relate to the discussion topic above.
+          
+          REQUIREMENTS:
+          1. RELEVANCE: Only include points that directly connect to the discussion topic
+          2. UNIQUENESS: Do not duplicate or rephrase points that were already mentioned
+          3. CONCISENESS: Capture the core idea while preserving student's voice
+          4. FOCUS: Skip any off-topic or tangential points
+          5. SYNTHESIS: Combine related ideas from the same student if they connect
+          
+          EXAMPLES:
+          Topic: "How does plastic affect ocean animals?"
+          
+          Input: "I think plastic is bad for the environment and also like we should use less paper and maybe turn off lights when we leave rooms"
+          ✓ INCLUDE: "Plastic is bad for the environment" (on-topic)
+          ✗ EXCLUDE: "Turn off lights when leaving rooms" (off-topic)
+          
+          Input: "The turtles get stuck in those plastic rings from soda cans and like they can't swim properly and stuff"
+          ✓ INCLUDE: "Turtles get stuck in plastic rings and can't swim"
+          
+          OUTPUT FORMAT:
+          Return response as JSON:
           {
-            "points": ["point 1 from transcript", "point 2 from transcript"]
+            "points": [
+              "point 1 from transcript",
+              "point 2 from transcript"
+            ]
           }`
         },
         {
