@@ -1,19 +1,23 @@
 import React, { useState, useRef, useEffect } from "react"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"  
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { ChatWindowProps } from '@/types'
-import AudioInput from '@/components/Discussion/audio/AudioInput'
 import ConsentModal from '@/components/Discussion/consent/ConsentModal'
+
+import AudioInput from '@/components/Discussion/audio/AudioInput'
 import { DeepgramContextProvider } from '@/components/Discussion/audio/DeepgramContextProvider'
 import { useDeepgram } from '@/components/Discussion/audio/DeepgramContextProvider'
+
 import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
 import { useUserConsent } from '@/lib/hooks/userConsent'
 import { useGroupMessages } from '@/lib/hooks/groupMessages'
 import { useChatActions } from '@/lib/hooks/chatActions'
+
+import { ChatWindowProps } from '@/types'
 
 const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { setDeepgramKey } = useDeepgram()
@@ -30,7 +34,7 @@ const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children
   return <>{children}</>
 }
 
-function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
+function ChatWindow({ groupId, discussionId, isTimeUp  }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("")
   const [showConsentModal, setShowConsentModal] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -179,6 +183,7 @@ function ChatWindow({ groupId, discussionId }: ChatWindowProps) {
                         userId={user.id}
                         discussionId={discussionId}
                         disabled={!hasConsented}
+                        isTimeUp={isTimeUp} 
                       />
                     </DeepgramInitializer>
                   </DeepgramContextProvider>

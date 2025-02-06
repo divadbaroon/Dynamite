@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import type { FC } from 'react'
 import { Timer } from "./components/Timer"
 import { ReviewDialog } from "./components/ReviewDialog"
@@ -23,15 +23,21 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
   currentPointIndex,
   isRunning,
   openItem,
+  isTimeUp,
   setCurrentPointIndex,
-  setOpenItem
+  setOpenItem,
+  setIsTimeUp
 }) => {
   const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false)
   const [isSubmitted] = useState<boolean>(false)
   const [editingPoint, setEditingPoint] = useState<EditingPoint | null>(null)
   const [editedContent, setEditedContent] = useState<string>("")
-  const [isTimeUp, setIsTimeUp] = useState<boolean>(false)
   const [ loading ] = useState<boolean>(false)
+
+  const handleTimeUp = useCallback(() => {
+    setIsTimeUp(true);
+    setIsReviewOpen(true);
+  }, [setIsTimeUp]);
 
   const { 
     timeLeft, 
@@ -41,10 +47,7 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     discussion, 
     mode, 
     isRunning,
-    onTimeUp: () => {
-      setIsTimeUp(true)
-      setIsReviewOpen(true)
-    }
+    onTimeUp: handleTimeUp
   })
 
   const handleReview = (): void => {
@@ -211,10 +214,7 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
         isRunning={isRunning}
         mode={mode}
         isSubmitted={isSubmitted}
-        onTimeUp={() => {
-          setIsTimeUp(true)
-          setIsReviewOpen(true)
-        }}
+        onTimeUp={handleTimeUp}
         discussionId={discussion.id}
       />
 
