@@ -4,14 +4,23 @@ import React, { useState, useEffect } from 'react'
 import ChatWindow from '@/components/Discussion/chat-window/ChatWindow'
 import DiscussionGuide from '@/components/Discussion/discussion-guide/DiscussionGuide'
 import { getDiscussionById } from '@/lib/actions/discussion'
-import { analyzeTranscript } from '@/lib/actions/transcript'
-import { Discussion, DiscussionClientProps } from '@/types'
+import { Discussion, DiscussionClientProps  } from '@/types'
+import { useSharedAnswers } from '@/lib/hooks/sharedAnswers'
+import { useSessionSubscription } from '@/lib/hooks/sessionSubscription'
+import { useTranscriptAnalysis } from "@/lib/hooks/transcriptAnalaysis"
 
-function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
+export default function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
     const [discussion, setDiscussion] = useState<Discussion | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [currentPointIndex, setCurrentPointIndex] = useState(0)
+    const [isRunning, setIsRunning] = useState(false)
+    const [openItem, setOpenItem] = useState<string>(`item-${currentPointIndex}`)
+    
+    // Properly destructure the hook's return values
+    const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
 
+    // Original discussion fetching
     useEffect(() => {
         const fetchDiscussion = async () => {
             try {
@@ -32,6 +41,7 @@ function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
                 }
 
                 setDiscussion(response.discussion)
+                setIsRunning(response.discussion.status === 'active')
             } catch (error) {
                 console.log("Error fetching discussion:", error)
                 setError("Failed to load discussion data")
@@ -43,27 +53,24 @@ function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
         fetchDiscussion()
     }, [discussionId])
 
-    // Transcript analysis interval using server action
-    useEffect(() => {
-        if (!discussion?.id || !groupId) return
+    // webhook for session
+    useSessionSubscription({
+        sessionId: discussionId,
+        currentPointIndex,
+        setIsRunning,
+        setCurrentPointIndex,
+        setOpenItem
+    })
 
-        const runAnalysis = async () => {
-            try {
-                const result = await analyzeTranscript(groupId, discussion.id)
-                console.log('Transcript analysis result:', result)
-                if (!result.success) {
-                    console.log('Transcript analysis failed:', result.error)
-                }
-            } catch (error) {
-                console.log('Error running transcript analysis:', error)
-            }
+    // Transcript analysis interval (every 10 seconds)
+    useTranscriptAnalysis(discussion?.id, groupId)
+
+    // Handler for setOpenItem that matches DiscussionGuideProps signature
+    const handleSetOpenItem = (item: string | undefined) => {
+        if (item !== undefined) {
+            setOpenItem(item)
         }
-
-        // Set up interval (every 10 seconds)
-        const intervalId = setInterval(runAnalysis, 1 * 10 * 1000)
-
-        return () => clearInterval(intervalId)
-    }, [discussion?.id, groupId])
+    }
 
     if (loading) {
         return (
@@ -88,6 +95,14 @@ function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
                     discussion={discussion} 
                     mode="discussion" 
                     groupId={groupId}
+                    sharedAnswers={sharedAnswers}
+                    currentPointIndex={currentPointIndex}
+                    isRunning={isRunning}
+                    openItem={openItem}
+                    loading={loading}
+                    setCurrentPointIndex={setCurrentPointIndex}
+                    setIsRunning={setIsRunning}
+                    setOpenItem={handleSetOpenItem}
                 />
             </div>
             <div className="flex-1 p-4 overflow-hidden">
@@ -99,5 +114,3 @@ function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
         </div>
     )
 }
-
-export default DiscussionClient
