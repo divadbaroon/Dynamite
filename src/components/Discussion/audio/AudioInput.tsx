@@ -19,7 +19,8 @@ const AudioInput: React.FC<AudioInputProps> = ({
   onMessageSubmit,
   userId,
   discussionId,
-  disabled = false
+  disabled = false,
+  isTimeUp
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
@@ -34,6 +35,27 @@ const AudioInput: React.FC<AudioInputProps> = ({
     disconnectFromDeepgram,
     deepgramKey 
   } = useDeepgram();
+
+  // Add effect to stop recording when discussion ends
+  useEffect(() => {
+    if (isTimeUp) {
+        // Stop recording and clean up
+        if (connectionState === SOCKET_STATES.open) {
+            disconnectFromDeepgram();
+            if (streamingRecorderRef.current?.state === 'recording') {
+                streamingRecorderRef.current.stop();
+            }
+            if (utteranceRecorderRef.current?.state === 'recording') {
+                utteranceRecorderRef.current.stop();
+            }
+            mediaStream?.getTracks().forEach(track => track.stop());
+            setMediaStream(null);
+            utteranceChunksRef.current = [];
+            streamingRecorderRef.current = null;
+            utteranceRecorderRef.current = null;
+        }
+    }
+}, [isTimeUp]);
 
   const createStreamingRecorder = (stream: MediaStream) => {
     console.log('Creating streaming MediaRecorder');
