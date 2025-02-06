@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import OpenAI from 'openai'
-import { SharedAnswers } from '@/types'
+import { SharedAnswers, BulletPoint } from '@/types'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -121,7 +121,7 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
       console.log('Initialized shared answers:', currentAnswers)
     }
 
-    const currentBullets = (currentAnswers[currentPointKey] as any[]) || []
+    const currentBullets = (currentAnswers[currentPointKey] as BulletPoint[]) || []
     const existingPoints = currentBullets
       .filter(bullet => bullet.content !== "(None)")
       .map(bullet => bullet.content);
