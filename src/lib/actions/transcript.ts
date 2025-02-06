@@ -84,14 +84,18 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
     const currentDiscussionPoint = session.discussion_points[session.current_point]
     console.log("1.) Current Discussion Point", currentDiscussionPoint)
 
-    // Filter messages by current point and last update time
-    const lastUpdated = answersResponse.data?.last_updated
+    // Get current time and calculate cutoff time (20 seconds ago)
+    const now = new Date()
+    const cutoffTime = new Date(now.getTime() - 20000) // 20 seconds ago
+
+    // Filter messages from last 20 seconds
     const messages = messagesResponse.data?.filter(msg => {
+      const messageTime = new Date(msg.created_at)
       return msg.current_point === session.current_point && 
-             (!lastUpdated || new Date(msg.created_at) > new Date(lastUpdated))
+             messageTime > cutoffTime
     }) || []
     
-    console.log("2.) New messages since last update", messages)
+    console.log("2.) Messages from last 20 seconds", messages)
 
     if (messagesResponse.error) {
       console.log('Messages error:', messagesResponse.error)
@@ -99,7 +103,7 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
     }
 
     if (!messages?.length) {
-      return { success: false, error: 'No new messages found since last update' }
+      return { success: false, error: 'No new messages found in the last 20 seconds' }
     }
 
     let currentAnswers = answersResponse.data?.answers || {}
@@ -192,7 +196,7 @@ export async function analyzeTranscript(sessionId: string, groupId: string) {
           EXISTING POINTS (These are already captured - DO NOT analyze or rephrase these):
           ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
                   
-          NEW MESSAGES TO ANALYZE (Messages since last update):
+          NEW MESSAGES TO ANALYZE (Messages from last 20 seconds):
           ${transcript}
           
           IMPORTANT: Only analyze the new messages above. If you find no new unique points that aren't already in the existing points list, return an empty array.`
