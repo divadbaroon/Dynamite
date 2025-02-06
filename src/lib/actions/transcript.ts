@@ -89,6 +89,8 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
 
     console.log("5.) Combined transcript", transcript)
      
+    console.log("Starting gpt analysis")
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -139,8 +141,13 @@ export async function analyzeTranscript(groupId: string, sessionId: string) {
       throw new Error('No content received from OpenAI')
     }
 
+    console.log("Recieved from gpt: ", content)
+
     // Parse the response and get new points
     const aiResponse = JSON.parse(content)
+
+    console.log('AI response: ', aiResponse)
+
     const newPoints = aiResponse.points || []
 
     console.log("6.) new bullet points from GPT", newPoints)
