@@ -5,10 +5,10 @@ import { createClient } from '@/utils/supabase/server';
 export async function uploadAudioToSupabase(
   audioBlob: Blob,
   discussionId: string,
-  userId: string
+  userId: string,
+  identifier?: string
 ): Promise<string> {
   try {
-
     // Validate audio blob
     if (!audioBlob || audioBlob.size === 0) {
       throw new Error('Invalid audio blob: empty or null');
@@ -18,15 +18,13 @@ export async function uploadAudioToSupabase(
     }
 
     const supabase = await createClient()
-    
-    // Get session server-side
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
 
     const timestamp = new Date().toISOString();
-    const filename = `recordings/${discussionId}/${userId}_${timestamp}.webm`;
+    
+    // Construct filename based on whether it's a full session recording or not
+    const filename = identifier === 'full_session' 
+      ? `recordings/${discussionId}/full_session_${userId}_${timestamp}.webm`
+      : `recordings/${discussionId}/${userId}_${timestamp}.webm`;
 
     // Convert Blob to Buffer for server-side upload
     const arrayBuffer = await audioBlob.arrayBuffer();
