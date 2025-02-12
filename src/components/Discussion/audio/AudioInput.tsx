@@ -11,7 +11,6 @@ import {
 } from '@/components/Discussion/audio/DeepgramContextProvider';
 import { AudioInputProps } from "@/types"
 import { updateMessageWithAudioAndPoint } from '@/lib/actions/discussion'
-
 import { uploadAudioToSupabase } from "@/lib/actions/audioUpload"
 import { pitchShiftAudio } from "@/components/Discussion/audio/components/handleAudioPitch"
 
@@ -26,7 +25,9 @@ const AudioInput: React.FC<AudioInputProps> = ({
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const streamingRecorderRef = useRef<MediaRecorder | null>(null);
   const utteranceRecorderRef = useRef<MediaRecorder | null>(null);
+  const sessionRecorderRef = useRef<MediaRecorder | null>(null);
   const utteranceChunksRef = useRef<Blob[]>([]);
+  const sessionChunksRef = useRef<Blob[]>([]);
   
   const { 
     connection, 
@@ -35,27 +36,6 @@ const AudioInput: React.FC<AudioInputProps> = ({
     disconnectFromDeepgram,
     deepgramKey 
   } = useDeepgram();
-
-  // Add effect to stop recording when discussion ends
-  useEffect(() => {
-    if (isTimeUp) {
-        // Stop recording and clean up
-        if (connectionState === SOCKET_STATES.open) {
-            disconnectFromDeepgram();
-            if (streamingRecorderRef.current?.state === 'recording') {
-                streamingRecorderRef.current.stop();
-            }
-            if (utteranceRecorderRef.current?.state === 'recording') {
-                utteranceRecorderRef.current.stop();
-            }
-            mediaStream?.getTracks().forEach(track => track.stop());
-            setMediaStream(null);
-            utteranceChunksRef.current = [];
-            streamingRecorderRef.current = null;
-            utteranceRecorderRef.current = null;
-        }
-    }
-}, [isTimeUp]);
 
   const createStreamingRecorder = (stream: MediaStream) => {
     console.log('Creating streaming MediaRecorder');
@@ -89,6 +69,77 @@ const AudioInput: React.FC<AudioInputProps> = ({
     return recorder;
   };
 
+  const createSessionRecorder = (stream: MediaStream) => {
+    console.log('Creating session MediaRecorder');
+    const recorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus'
+    });
+    
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        sessionChunksRef.current.push(e.data);
+      }
+    };
+    
+    sessionRecorderRef.current = recorder;
+    return recorder;
+  };
+
+  // Handle session end and upload
+  useEffect(() => {
+    const handleSessionEnd = async () => {
+      if (isTimeUp && sessionRecorderRef.current?.state === 'recording') {
+        console.log('Session ending, processing full recording...');
+        sessionRecorderRef.current.stop();
+        
+        // Wait briefly for final chunks
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (sessionChunksRef.current.length > 0) {
+          const sessionBlob = new Blob(sessionChunksRef.current, {
+            type: 'audio/webm;codecs=opus'
+          });
+
+          try {
+            // Pitch shift the full session audio
+            const pitchedSessionBlob = await pitchShiftAudio(sessionBlob);
+            
+            // Upload the full session recording
+            const sessionUrl = await uploadAudioToSupabase(
+              pitchedSessionBlob,
+              discussionId,
+              userId,
+              'full_session'  
+            );
+            console.log('Full session upload completed:', sessionUrl);
+          } catch (error) {
+            console.log('Session upload error:', error);
+          }
+        }
+      }
+    };
+
+    handleSessionEnd();
+  }, [isTimeUp, discussionId, userId]);
+
+  // Add effect to stop recording when discussion ends
+  useEffect(() => {
+    if (isTimeUp) {
+      if (connectionState === SOCKET_STATES.open) {
+        disconnectFromDeepgram();
+        [streamingRecorderRef, utteranceRecorderRef, sessionRecorderRef].forEach(ref => {
+          if (ref.current?.state === 'recording') {
+            ref.current.stop();
+          }
+        });
+        mediaStream?.getTracks().forEach(track => track.stop());
+        setMediaStream(null);
+        utteranceChunksRef.current = [];
+        sessionChunksRef.current = [];
+      }
+    }
+  }, [isTimeUp]);
+
   useEffect(() => {
     const initializeAudio = async () => {
       if (!disabled && !mediaStream && deepgramKey) {
@@ -102,6 +153,10 @@ const AudioInput: React.FC<AudioInputProps> = ({
           });
           
           setMediaStream(stream);
+          
+          // Start session recording immediately
+          const sessionRecorder = createSessionRecorder(stream);
+          sessionRecorder.start();
           
           await connectToDeepgram({
             model: 'nova-2',
@@ -228,11 +283,16 @@ const AudioInput: React.FC<AudioInputProps> = ({
         if (utteranceRecorderRef.current?.state === 'recording') {
           utteranceRecorderRef.current.stop();
         }
+        if (sessionRecorderRef.current?.state === 'recording') {
+          sessionRecorderRef.current.stop();
+        }
         mediaStream?.getTracks().forEach(track => track.stop());
         setMediaStream(null);
         utteranceChunksRef.current = [];
+        sessionChunksRef.current = [];
         streamingRecorderRef.current = null;
         utteranceRecorderRef.current = null;
+        sessionRecorderRef.current = null;
       } else {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -241,6 +301,11 @@ const AudioInput: React.FC<AudioInputProps> = ({
           }
         });
         setMediaStream(stream);
+        
+        // Start session recording immediately
+        const sessionRecorder = createSessionRecorder(stream);
+        sessionRecorder.start();
+        
         await connectToDeepgram({
           model: 'nova-2',
           interim_results: true,
@@ -257,12 +322,11 @@ const AudioInput: React.FC<AudioInputProps> = ({
   useEffect(() => {
     return () => {
       disconnectFromDeepgram();
-      if (streamingRecorderRef.current?.state === 'recording') {
-        streamingRecorderRef.current.stop();
-      }
-      if (utteranceRecorderRef.current?.state === 'recording') {
-        utteranceRecorderRef.current.stop();
-      }
+      [streamingRecorderRef, utteranceRecorderRef, sessionRecorderRef].forEach(ref => {
+        if (ref.current?.state === 'recording') {
+          ref.current.stop();
+        }
+      });
       mediaStream?.getTracks().forEach(track => track.stop());
     };
   }, []);
@@ -287,4 +351,3 @@ const AudioInput: React.FC<AudioInputProps> = ({
 };
 
 export default AudioInput;
-
