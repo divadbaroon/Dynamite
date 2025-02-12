@@ -1,13 +1,19 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
+
 import { useRouter } from 'next/navigation';
-import WaitingRoomGuide from '@/components/Discussion/waiting-room/WaitingRoomDisucussionGuide'
+
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import { createClient } from "@/utils/supabase/client";
-import { getDiscussionById, updateHasLaunched, updateDiscussionPointTimestamps } from "@/lib/actions/discussion";
+
+import WaitingRoomGuide from '@/components/Discussion/waiting-room/WaitingRoomDisucussionGuide'
+
+import { getDiscussionById } from "@/lib/actions/discussion";
+import { useDiscussionStatus } from '@/lib/hooks/useDiscussionStatus';
+
+import { handleDiscussionTransition } from '@/lib/actions/discussion-transition';
+
 import type { Discussion, WaitingRoomClientProps } from '@/types';
 
 export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoomClientProps) {
@@ -16,7 +22,23 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
   const [loading, setLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+
+  const handleDiscussionStart = async () => {
+    if (isTransitioning) return;
+    
+    await handleDiscussionTransition({
+      discussionId,
+      groupId,
+      onTransitionStart: () => setIsTransitioning(true),
+      onTransitionError: () => setIsTransitioning(false),
+      navigate: router.replace
+    });
+  };
+
+  useDiscussionStatus({
+    discussionId,
+    onDiscussionStart: handleDiscussionStart
+  });
 
   useEffect(() => {
     if (!discussionId) {
@@ -25,7 +47,6 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
       return;
     }
 
-    // Initial discussion fetch
     const fetchDiscussion = async () => {
       try {
         const { discussion, error } = await getDiscussionById(discussionId);
@@ -37,7 +58,6 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
 
         setDiscussion(discussion);
         
-        // If discussion is already active, handle transition
         if (discussion.status === 'active') {
           handleDiscussionStart();
         }
@@ -50,59 +70,8 @@ export default function WaitingRoomClient({ discussionId, groupId }: WaitingRoom
     };
 
     fetchDiscussion();
-
-    // Set up realtime subscription
-    const channel = supabase
-      .channel(`discussion-status-${discussionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sessions',
-          filter: `id=eq.${discussionId}`
-        },
-        async (payload) => {
-          const updatedDiscussion = payload.new as Discussion;
-          setDiscussion(updatedDiscussion);
-
-          if (updatedDiscussion.status === 'active' && !isTransitioning) {
-            handleDiscussionStart();
-          }
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [discussionId, groupId, isTransitioning]);
-
-  const handleDiscussionStart = async () => {
-    try {
-      setIsTransitioning(true);
-      
-      // Update has_launched timestamp
-      const { error: launchError } = await updateHasLaunched(discussionId);
-      if (launchError) {
-        console.log("Error updating has_launched:", launchError);
-      }
+  }, [discussionId]);
   
-      // Update discussion point timestamps
-      const { error: timestampError } = await updateDiscussionPointTimestamps(discussionId);
-      if (timestampError) {
-        console.log("Error updating point timestamps:", timestampError);
-      }
-  
-      toast.success("Discussion is starting!");
-      router.replace(`/discussion/join/${discussionId}/${groupId}`);
-    } catch (error) {
-      console.log("Error during transition:", error);
-      setIsTransitioning(false);
-      toast.error("Failed to join discussion");
-    }
-  };
   if (loading) {
     return (
       <div className="h-[77vh] w-full flex items-center justify-center">
