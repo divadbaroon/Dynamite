@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"  
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,6 @@ import { useDeepgram } from '@/components/Discussion/audio/DeepgramContextProvid
 
 import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
 import { useUserConsent } from '@/lib/hooks/userConsent'
-import { useGroupMessages } from '@/lib/hooks/groupMessages'
 import { useChatActions } from '@/lib/hooks/chatActions'
 
 import { ChatWindowProps } from '@/types'
@@ -34,10 +33,16 @@ const DeepgramInitializer: React.FC<{ children: React.ReactNode }> = ({ children
   return <>{children}</>
 }
 
-function ChatWindow({ groupId, discussionId, isTimeUp  }: ChatWindowProps) {
+function ChatWindow({ 
+  groupId, 
+  discussionId, 
+  isTimeUp,
+  messages,
+  loading,
+  scrollAreaRef
+}: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("")
   const [showConsentModal, setShowConsentModal] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   const { user } = useSupabaseUser()
   const { 
@@ -47,8 +52,6 @@ function ChatWindow({ groupId, discussionId, isTimeUp  }: ChatWindowProps) {
     handleConsent 
   } = useUserConsent(user)
   
-  const { messages, loading } = useGroupMessages(groupId, user, scrollAreaRef)
-
   const { 
     handleSendMessage, 
     shouldGroupMessage 
@@ -95,7 +98,7 @@ function ChatWindow({ groupId, discussionId, isTimeUp  }: ChatWindowProps) {
                     {!isCurrentUser && (
                       <div className={`flex-shrink-0 ${isGrouped ? 'invisible' : ''} mt-6`}>
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={message.username} />
+                          <AvatarImage src={message.username}/>
                           <AvatarFallback className="text-xs">{message.username[0]}</AvatarFallback>
                         </Avatar>
                       </div>  
@@ -136,7 +139,7 @@ function ChatWindow({ groupId, discussionId, isTimeUp  }: ChatWindowProps) {
                     {isCurrentUser && (
                       <div className={`flex-shrink-0 ${isGrouped ? 'invisible' : ''} mt-6`}>  
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={message.username} />
+                          <AvatarImage src={message.username} />
                           <AvatarFallback className="text-xs">{message.username[0]}</AvatarFallback>
                         </Avatar>
                       </div>
