@@ -15,7 +15,6 @@ import { createDiscussion } from '@/lib/actions/discussion'
 export default function CreateDiscussionPage() {
   const router = useRouter()
   
-  // Core states
   const [step, setStep] = useState(1)
   const [title, setTitle] = useState('')
   const [duration, setDuration] = useState('')
@@ -35,13 +34,11 @@ export default function CreateDiscussionPage() {
   }
 
   const handleCreateDiscussion = async () => {
-    // Basic validation
     if (!title || !task || !scenario || !duration) {  
       console.log('Please fill in all required fields')
       return
     }
   
-    // Filter out empty discussion points
     const validDiscussionPoints = discussionPoints.filter(point => point.trim() !== '')
     if (validDiscussionPoints.length === 0) {
       console.log('Please add at least one discussion point')
