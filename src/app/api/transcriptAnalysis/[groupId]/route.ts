@@ -20,14 +20,17 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ groupId: string }> }
 ) {
-  const { groupId } = await context.params
-  const { sessionId, messages }: RequestBody = await request.json()
-  
-  // Create lock keys
-  const lockKey = `analysis_lock:${groupId}_${sessionId}`
-  const statusKey = `analysis_status:${groupId}_${sessionId}`
+  let lockKey = ''
+  let statusKey = ''
 
   try {
+    const { groupId } = await context.params
+    const { sessionId, messages }: RequestBody = await request.json()
+    
+    // Create lock keys
+    lockKey = `analysis_lock:${groupId}_${sessionId}`
+    statusKey = `analysis_status:${groupId}_${sessionId}`
+
     // Try to acquire lock
     const acquired = await kv.set(lockKey, 'locked', { 
       nx: true,
@@ -48,7 +51,7 @@ export async function POST(
 
     const supabase = await createClient()
 
-    // Fetch only session and answers data
+    // Fetch session and answers data
     const [sessionResponse, answersResponse] = await Promise.all([
       supabase
         .from('sessions')
@@ -64,7 +67,9 @@ export async function POST(
         .maybeSingle()
     ]);
 
-    if (sessionResponse.error) throw sessionResponse.error
+    if (sessionResponse.error) {
+      throw new Error(`Session fetch error: ${sessionResponse.error.message}`)
+    }
 
     const session = sessionResponse.data
     if (!session || !session.discussion_points || !Array.isArray(session.discussion_points)) {
@@ -92,8 +97,6 @@ export async function POST(
       return messageTime > cutoffTime
     })
 
-    console.log("RECENT MESSAGS", recentMessages)
-
     if (!recentMessages.length) {
       return NextResponse.json({ 
         success: false, 
@@ -120,7 +123,9 @@ export async function POST(
           last_updated: new Date().toISOString()
         });
 
-      if (initError) throw initError
+      if (initError) {
+        throw new Error(`Failed to initialize answers: ${initError.message}`)
+      }
     }
 
     const currentBullets = (currentAnswers[currentPointKey] as BulletPoint[]) || []
@@ -138,111 +143,138 @@ export async function POST(
 
     await kv.set(statusKey, 'Analyzing with GPT...')
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o", 
-      messages: [
-        {
-          role: "system",
-          content: `You are analyzing NEW messages from a classroom discussion transcript. Extract key points as JSON.
-          
-          DISCUSSION TOPIC: "${currentDiscussionPoint}"
-          
-          TASK: Extract key points ONLY from the new messages that have been added since the last update.
-          
-          REQUIREMENTS:
-          1. RELEVANCE: Only include points that directly connect to the discussion topic
-          2. UNIQUENESS: Do not analyze or rephrase ANY existing points - focus ONLY on new content
-          3. CONCISENESS: Capture the core idea while preserving student's voice
-          4. FOCUS: Skip any off-topic or tangential points
-          5. SYNTHESIS: Combine related ideas from the same student if they connect
-          
-          OUTPUT FORMAT:
-          Return a JSON response with an array of points. For example:
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
           {
-            "points": [
-              "First key point from discussion",
-              "Second key point from discussion"
-            ]
-          }`
-        },
-        {
-          role: "user",
-          content: `Please analyze this discussion and return the points as JSON.
-          
-          Current discussion topic: ${currentDiscussionPoint}
-                  
-          EXISTING POINTS (These are already captured - DO NOT analyze or rephrase these):
-          ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
-                  
-          NEW MESSAGES TO ANALYZE:
-          ${transcript}
-          
-          IMPORTANT: Only analyze the new messages above. If you find no new unique points that aren't already in the existing points list, return an empty array.`
+            role: "system",
+            content: `You are analyzing NEW messages from a classroom discussion transcript. Extract key points as JSON.
+            
+            DISCUSSION TOPIC: "${currentDiscussionPoint}"
+            
+            TASK: Extract key points ONLY from the new messages that have been added since the last update.
+            
+            REQUIREMENTS:
+            1. RELEVANCE: Only include points that directly connect to the discussion topic
+            2. UNIQUENESS: Do not analyze or rephrase ANY existing points - focus ONLY on new content
+            3. CONCISENESS: Capture the core idea while preserving student's voice
+            4. FOCUS: Skip any off-topic or tangential points
+            5. SYNTHESIS: Combine related ideas from the same student if they connect
+            
+            OUTPUT FORMAT:
+            Return a JSON response with an array of points like this:
+            {
+              "points": [
+                "First key point from discussion",
+                "Second key point from discussion"
+              ]
+            }`
+          },
+          {
+            role: "user",
+            content: `Please analyze this discussion and return the points as JSON.
+            
+            Current discussion topic: ${currentDiscussionPoint}
+                    
+            EXISTING POINTS (These are already captured - DO NOT analyze or rephrase these):
+            ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
+                    
+            NEW MESSAGES TO ANALYZE:
+            ${transcript}
+            
+            IMPORTANT: Only analyze the new messages above. If you find no new unique points that aren't already in the existing points list, return an empty array.
+            
+            Return your response in this exact JSON format:
+            {
+              "points": []
+            }`
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
+
+      const content = completion.choices[0].message.content
+      if (!content) {
+        throw new Error('No content received from OpenAI')
+      }
+
+      try {
+        const aiResponse = JSON.parse(content)
+        const newPoints = (aiResponse.points || []).filter((point: string) => 
+          !isTooSimilar(point, existingPoints)
+        )
+
+        await kv.set(statusKey, 'Saving results...')
+        
+        const updatedAnswers = {
+          ...currentAnswers,
+          [currentPointKey]: [
+            ...currentBullets,
+            ...newPoints.map((content: string) => ({ content, isDeleted: false }))
+          ]
         }
-      ],
-      response_format: { type: "json_object" }
-    })
-    
-    const content = completion.choices[0].message.content
-    if (!content) {
-      throw new Error('No content received from OpenAI')
-    }
 
-    const aiResponse = JSON.parse(content)
+        const { error: upsertError } = await supabase
+          .from('shared_answers')
+          .upsert({
+            session_id: sessionId,
+            group_id: groupId,
+            answers: updatedAnswers,
+            last_updated: new Date().toISOString()
+          }, {
+            onConflict: 'session_id,group_id',
+            ignoreDuplicates: false
+          });
 
-    // Filter out new points that are too similar to existing ones
-    const newPoints = (aiResponse.points || []).filter((point: string) => 
-      !isTooSimilar(point, existingPoints)
-    )
+        if (upsertError) {
+          throw new Error(`Failed to save answers: ${upsertError.message}`)
+        }
 
-    console.log("NEW DISCUSSION POINT", newPoints)
+        await kv.del(statusKey)
 
+        return NextResponse.json({ 
+          success: true,
+          message: 'Analysis completed successfully'
+        })
 
-    await kv.set(statusKey, 'Saving results...')
-     
-    const updatedAnswers = {
-      ...currentAnswers
-    }
-
-    updatedAnswers[currentPointKey] = [
-      ...currentBullets,
-      ...newPoints.map((content: string) => ({ content, isDeleted: false }))
-    ]
-
-    const { error: upsertError } = await supabase
-      .from('shared_answers')
-      .upsert({
-        session_id: sessionId,
-        group_id: groupId,
-        answers: updatedAnswers,
-        last_updated: new Date().toISOString()
-      }, {
-        onConflict: 'session_id,group_id',
-        ignoreDuplicates: false
-      });
-
-    if (upsertError) throw upsertError
-
-    // Clear status on success
-    await kv.del(statusKey)
-
-    return NextResponse.json({ 
-      success: true,
-      message: 'Analysis completed successfully'
-    })
+      } catch (parseError: unknown) {
+        const errorMessage = parseError instanceof Error 
+          ? parseError.message 
+          : 'Unknown error during parsing';
+        throw new Error(`Failed to parse OpenAI response: ${errorMessage}. Content: ${content}`)
+      }
+      
+      } catch (openaiError: unknown) {
+        const errorMessage = openaiError instanceof Error 
+          ? openaiError.message 
+          : 'Unknown OpenAI API error';
+        throw new Error(`OpenAI API error: ${errorMessage}`)
+      }
 
   } catch (error) {
     console.error('Analysis error:', error)
-    return NextResponse.json(
-      { 
+    // Ensure we're returning a proper JSON response even in error cases
+    return new NextResponse(
+      JSON.stringify({ 
         success: false, 
         error: String(error),
         message: 'Analysis failed'
-      },
-      { status: 500 }
+      }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     )
   } finally {
-    // Always clear the lock when done
-    await kv.del(lockKey)
+    // Only try to clear the lock if the keys were set
+    if (lockKey && statusKey) {
+      await Promise.all([
+        kv.del(lockKey),
+        kv.del(statusKey)
+      ]).catch(console.error)
+    }
   }
 }
