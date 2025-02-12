@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import type { FC } from 'react'
 import { Timer } from "./components/Timer"
 import { ReviewDialog } from "./components/ReviewDialog"
@@ -32,12 +32,22 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
   const [isSubmitted] = useState<boolean>(false)
   const [editingPoint, setEditingPoint] = useState<EditingPoint | null>(null)
   const [editedContent, setEditedContent] = useState<string>("")
-  const [ loading ] = useState<boolean>(false)
+  const [loading] = useState<boolean>(false)
 
+  // Handle time up with useEffect to avoid render-phase updates
   const handleTimeUp = useCallback(() => {
-    setIsTimeUp(true);
-    setIsReviewOpen(true);
+    // Defer state updates to next tick
+    Promise.resolve().then(() => {
+      setIsTimeUp(true);
+    });
   }, [setIsTimeUp]);
+
+  // Handle review dialog opening separately
+  useEffect(() => {
+    if (isTimeUp) {
+      setIsReviewOpen(true);
+    }
+  }, [isTimeUp]);
 
   const { 
     timeLeft, 
@@ -50,9 +60,9 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     onTimeUp: handleTimeUp
   })
 
-  const handleReview = (): void => {
+  const handleReview = useCallback((): void => {
     setIsReviewOpen(true)
-  }
+  }, [])
 
   const handleDelete = async (pointIndex: number, bulletIndex: number): Promise<void> => {
     if (!discussion?.id || !groupId) {
@@ -75,7 +85,7 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
         }
       }
   
-      const { error } = await deleteAnswerPoint(discussion.id, groupId, pointIndex, bulletIndex, updatedAnswers)
+      const { error } = await deleteAnswerPoint(discussion.id, groupId, updatedAnswers)
   
       if (error) throw error
       toast.success('Bullet point deleted')
@@ -139,14 +149,12 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
       if (error) throw error
       toast.success('Bullet point restored')
     } catch (error) {
-      console.log('Error restoring bullet point:', error)
+      console.error('Error restoring bullet point:', error)
       toast.error('Failed to restore bullet point')
     }
   }
 
-  if (!discussion) return null
-
-  const getCardHeight = () => {
+  const getCardHeight = useCallback(() => {
     switch (mode) {
       case 'discussion':
         return 'h-[90vh]'
@@ -155,7 +163,9 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
       default:
         return 'h-[80vh]'
     }
-  }
+  }, [mode])
+
+  if (!discussion) return null
 
   if (loading) {
     return (
