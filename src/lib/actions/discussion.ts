@@ -1,11 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { Discussion, SharedAnswers, DiscussionPoint } from '@/types'
-
-export type CreateDiscussionInput = Omit<Discussion, 'id' | 'created_at' | 'author' | 'discussion_points'> & {
-  discussion_points: string[]
-}
+import { SharedAnswers, DiscussionPoint, CreateDiscussionInput  } from '@/types'
 
 // Then update your createDiscussion function signature
 export async function createDiscussion(data: CreateDiscussionInput) {
@@ -174,8 +170,6 @@ export async function fetchSharedAnswers(discussionId: string, groupId: string) 
 export async function deleteAnswerPoint(
   discussionId: string, 
   groupId: string, 
-  pointIndex: number, 
-  bulletIndex: number,
   updatedAnswers: SharedAnswers
 ) {
   const supabase = await createClient()
