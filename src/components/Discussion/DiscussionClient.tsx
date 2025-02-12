@@ -1,13 +1,19 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+
 import ChatWindow from '@/components/Discussion/chat-window/ChatWindow'
 import DiscussionGuide from '@/components/Discussion/discussion-guide/DiscussionGuide'
+
 import { getDiscussionById } from '@/lib/actions/discussion'
-import { Discussion, DiscussionClientProps  } from '@/types'
+
 import { useSharedAnswers } from '@/lib/hooks/sharedAnswers'
 import { useSessionSubscription } from '@/lib/hooks/sessionSubscription'
 import { useTranscriptAnalysis } from "@/lib/hooks/transcriptAnalaysis"
+import { useGroupMessages } from '@/lib/hooks/groupMessages'
+import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
+
+import { Discussion, DiscussionClientProps } from '@/types'
 
 export default function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
     const [discussion, setDiscussion] = useState<Discussion | null>(null)
@@ -18,13 +24,25 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     const [openItem, setOpenItem] = useState<string>(`item-${currentPointIndex}`)
     const [isTimeUp, setIsTimeUp] = useState<boolean>(false)
     
-    // Call the hook at the top level
-    const { analyzeTranscript } = useTranscriptAnalysis();
+    const scrollAreaRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
+    const { user } = useSupabaseUser()
+    const messagesRef = useRef<typeof messages>([])
     
-    // Properly destructure the hook's return values
+    // Get messages
+    const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef)
+    
+    // Update messagesRef when messages change
+    useEffect(() => {
+        messagesRef.current = messages
+    }, [messages])
+    
+    // Get analysis functionality and status
+    const { analyzeTranscript, isAnalyzing, status } = useTranscriptAnalysis()
+    
+    // Get shared answers
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
 
-    // Original discussion fetching
+    // Fetch discussion data
     useEffect(() => {
         const fetchDiscussion = async () => {
             try {
@@ -47,7 +65,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                 setDiscussion(response.discussion)
                 setIsRunning(response.discussion.status === 'active')
             } catch (error) {
-                console.log("Error fetching discussion:", error)
+                console.error("Error fetching discussion:", error)
                 setError("Failed to load discussion data")
             } finally {
                 setLoading(false)
@@ -57,7 +75,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         fetchDiscussion()
     }, [discussionId])
 
-    // webhook for session
+    // Subscribe to session updates
     useSessionSubscription({
         sessionId: discussionId,
         currentPointIndex,
@@ -66,32 +84,38 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         setOpenItem
     })
 
-    // Only run transcript analysis when discussion is active
+    // Run transcript analysis on interval when discussion is active
     useEffect(() => {
-        let analysisInterval: NodeJS.Timeout | null = null;
+        let analysisInterval: NodeJS.Timeout | null = null
         
         if (discussion?.id && groupId && !isTimeUp) {
-            // Start transcript analysis
-            const startAnalysis = async () => {
-                await analyzeTranscript(discussion.id, groupId);
-            };
+            const runAnalysis = async () => {
+                try {
+                    // Use the ref to get latest messages
+                    const result = await analyzeTranscript(discussion.id, groupId, messagesRef.current)
+                    
+                    if (result.inProgress) {
+                        console.log('Analysis in progress:', result.message)
+                    }
+                } catch (error) {
+                    console.error('Analysis failed:', error)
+                }
+            }
             
             // Initial analysis
-            startAnalysis();
+            runAnalysis()
             
-            // Set up interval (every 10 seconds) only if discussion is active
-            analysisInterval = setInterval(startAnalysis, 10000);
+            // Set up interval (every 15 seconds)
+            analysisInterval = setInterval(runAnalysis, 15000)
         }
 
-        // Cleanup function
         return () => {
             if (analysisInterval) {
-                clearInterval(analysisInterval);
+                clearInterval(analysisInterval)
             }
-        };
-    }, [discussion?.status, discussion?.id, groupId, analyzeTranscript]);
+        }
+    }, [discussion?.id, groupId, analyzeTranscript, isTimeUp]) // Removed messages and discussion.status from deps
 
-    // Handler for setOpenItem that matches DiscussionGuideProps signature
     const handleSetOpenItem = (item: string | undefined) => {
         if (item !== undefined) {
             setOpenItem(item)
@@ -132,12 +156,20 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     setOpenItem={handleSetOpenItem}
                     setIsTimeUp={setIsTimeUp}
                 />
+                {isAnalyzing && status && (
+                    <div className="fixed bottom-4 right-4 bg-white p-2 rounded-md shadow-md text-sm text-gray-600">
+                        Analysis Status: {status}
+                    </div>
+                )}
             </div>
             <div className="flex-1 p-4 overflow-hidden">
                 <ChatWindow 
                     groupId={groupId} 
                     discussionId={discussionId}
                     isTimeUp={isTimeUp}
+                    messages={messages}
+                    loading={messagesLoading}
+                    scrollAreaRef={scrollAreaRef}
                 />
             </div>
         </div>
