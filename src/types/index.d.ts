@@ -1,5 +1,6 @@
 
-// Sessions
+// ====== SESSIONS
+
 export type Discussion = {
     id: string
     created_at: string
@@ -57,7 +58,12 @@ export interface ConsentPageProps {
   onError: (error: string) => void
 }
 
-// Groups 
+export type CreateDiscussionInput = Omit<Discussion, 'id' | 'created_at' | 'author' | 'discussion_points'> & {
+  discussion_points: string[]
+}
+
+// ====== GROUPS
+
 export interface Group {
   id: string
   session_id: string
@@ -75,7 +81,13 @@ export interface GroupSelectionClientProps {
   discussionId: string;
 }
 
-// Messages
+export interface UseDiscussionStatusProps {
+  discussionId: string;
+  onDiscussionStart?: () => void;
+}
+
+// ====== MESSAGE
+
 export interface Message {
   id: string;
   content: string;
@@ -86,7 +98,8 @@ export interface Message {
   group_id?: string;        
 }
 
-// Discussion
+// ====== DISCUSSION
+
 export interface DiscussionClientProps {
   discussionId: string;
   groupId: string;
@@ -96,6 +109,9 @@ export interface ChatWindowProps {
   groupId: string;
   discussionId: string;
   isTimeUp: boolean;
+  messages: Message[]
+  loading: boolean
+  scrollAreaRef: React.RefObject<HTMLDivElement>
 }
 
 export interface DiscussionGuideProps {
@@ -139,7 +155,7 @@ export interface SharedAnswersRow {
   last_updated: string;
 }
 
-// User
+// ====== USER
 
 export interface SupabaseUser {
   id: string
@@ -160,7 +176,7 @@ export interface UserData {
   consent_status: boolean
 }
 
-// Audio
+// ====== AUDIO
 
 export interface AudioInputProps {
   onMessageSubmit: (message: string) => Promise<void>;
@@ -170,7 +186,7 @@ export interface AudioInputProps {
   isTimeUp?: boolean;
 }
 
-// ====== WAITING-ROOM PAGE
+// ====== WAITING-ROOM
 
 export interface WaitingRoomProps {
   params: {
@@ -179,13 +195,30 @@ export interface WaitingRoomProps {
   }
 }
 
-// Navbar
+export interface WaitingRoomClientProps {
+  discussionId: string;
+  groupId: string;
+}
+
+export interface WaitingRoomGuideProps {
+  discussion: Discussion | null;
+}
+
+export interface UseDiscussionTransitionProps {
+  discussionId: string;
+  groupId: string;
+  onTransitionStart: () => void;
+  onTransitionError: () => void;
+  navigate: (path: string) => void;
+}
+
+// ====== NAVBAR
 
 export interface NavbarProps {
   user: User | null
 }
 
-// Discussion Points
+// ====== DISCUSSION-POINTS
 
 export interface DiscussionPointsProps {
   discussion: Discussion;
@@ -205,7 +238,7 @@ export interface DiscussionPointsProps {
   isRunning: boolean;
 }
 
-// Answer Review Dialog
+//  ====== ANSWER-REVIEW
 
 export interface ReviewDialogProps {
   isOpen: boolean;
@@ -224,7 +257,7 @@ export interface ReviewDialogProps {
   userId: string;
 }
 
-// Ratings
+//  ====== FEEDBACK
 
 export interface Ratings {
   usability: number
@@ -237,7 +270,7 @@ export interface StarRatingProps {
   onChange: (rating: number) => void
 }
 
-// Chat
+//  ====== CHAT
 
 export interface UseChatActionsProps {
   user: SupabaseUser | null
@@ -268,11 +301,14 @@ export interface EditingPoint {
   bulletIndex: number
 }
 
-export interface WaitingRoomClientProps {
-  discussionId: string;
-  groupId: string;
+export interface MessageData {
+  content: string
+  timestamp: string
+  username: string
+  userId: string
 }
 
-export interface WaitingRoomGuideProps {
-  discussion: Discussion | null;
+export interface RequestBody {
+  sessionId: string
+  messages: MessageData[]
 }
