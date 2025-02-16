@@ -17,35 +17,38 @@ export const verifyBulletPoints = async (
       {
         role: "system",
         content: `You are a verification system for classroom discussion bullet points.
-        Your task is to verify each proposed bullet point meets ALL of the following criteria:
+        Your task is to verify each proposed bullet point meets the following criteria:
 
         CURRENT DISCUSSION TOPIC: "${currentPoint.content}"
 
         VERIFICATION CRITERIA:
-        1. NOVELTY CHECK: The point must contain a new idea not present in existing points
-        2. RELEVANCE CHECK: The point must directly relate to the current discussion topic
-        3. REDUNDANCY CHECK: The point must not be a rephrasing of any existing point
-        4. EVIDENCE CHECK: The point must be directly supported by content in the transcript
+        1. RELEVANCE: The point must clearly relate to the discussion topic and address some aspect of the question
+        2. EVIDENCE: The point must be based on ideas expressed in the transcript
+        3. UNIQUENESS: The point should not duplicate existing points, though it may build upon them
+        4. COMPLETENESS: The point should express a complete thought or proposal
         
-        For each point, return:
-        - verified: boolean (true if point passes ALL checks)
-        - reason: string (if not verified, explain why)
+        For each point, verify:
+        - Is it clearly related to the discussion topic?
+        - Is it supported by the discussion transcript?
+        - Is it different from existing points?
+        - Does it express a complete idea?
         
-        BE STRICT IN YOUR VERIFICATION:
-        - If there's any doubt, reject the point
-        - Points must be explicitly supported by the discussion transcript
-        - Reject any points that make claims beyond what was actually discussed`
+        Return for each point:
+        - verified: boolean (true if meets criteria)
+        - reason: string (explain verification decision)
+        
+        Note: Points should be meaningful contributions that advance the discussion, but don't need to be perfectly polished.`
       },
       {
         role: "user",
-        content: `Please verify these proposed bullet points:
+        content: `Verify these proposed bullet points:
         
-        CURRENT DISCUSSION TOPIC: ${currentPoint.content}
+        DISCUSSION TOPIC: ${currentPoint.content}
         
         EXISTING POINTS:
         ${existingPoints.length ? existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
         
-        DISCUSSION TRANSCRIPT:
+        TRANSCRIPT:
         ${transcript}
         
         POINTS TO VERIFY:
