@@ -12,7 +12,6 @@ export function DiscussionPoints({
   mode,
   currentPointIndex,
   openItem,
-  setOpenItem,
   sharedAnswers,
   editingPoint,
   setEditingPoint,
@@ -36,9 +35,8 @@ export function DiscussionPoints({
           return;
         }
         
-        // Immediately update local state
+        // Just update currentPointIndex - openItem will be derived automatically
         setCurrentPointIndex(nextPointIndex);
-        setOpenItem(`item-${nextPointIndex}`);
       } catch (error) {
         console.log('Error in update operation:', error);
       }
@@ -179,7 +177,14 @@ export function DiscussionPoints({
       <Accordion 
         type="single" 
         value={openItem}
-        onValueChange={setOpenItem}
+        onValueChange={(value) => {
+          if (value) {
+            const index = parseInt(value.replace('item-', ''));
+            if (!isNaN(index)) {
+              setCurrentPointIndex(index);
+            }
+          }
+        }}
         defaultValue={`item-${currentPointIndex}`} 
         className="w-full"
       >
