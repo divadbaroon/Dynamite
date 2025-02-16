@@ -29,14 +29,11 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
   setCurrentPointIndex,
   setIsTimeUp
 }) => {
-  if (!discussion) return null;
-  if (!groupId) return <div>Missing group ID</div>;
-
   const handleTimeUp = useCallback(() => {
     requestAnimationFrame(() => {
       setIsTimeUp(true);
     });
-  }, []);
+  }, [setIsTimeUp]);
 
   const { 
     timeLeft, 
@@ -69,8 +66,12 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     handleReview
   } = useReviewDialog({ isTimeUp });
 
+  // Early returns for invalid state
+  if (!discussion) return null;
+  if (!groupId) return <div>Missing group ID</div>;
+
   const discussionPointsProps = useMemo(() => ({
-    discussion,
+    discussion, // Now guaranteed to be non-null
     mode,
     currentPointIndex,
     setCurrentPointIndex,
@@ -88,10 +89,13 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     discussion,
     mode,
     currentPointIndex,
+    setCurrentPointIndex,
     openItem,
     sharedAnswers,
     editingPoint,
+    setEditingPoint,
     editedContent,
+    setEditedContent,
     handleSaveEdit,
     handleDelete,
     handleUndo,
@@ -105,8 +109,15 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     mode,
     isSubmitted: false,
     onTimeUp: handleTimeUp,
-    discussionId: discussion.id
-  }), [timeLeft, isRunning, mode, handleTimeUp, discussion.id]);
+    discussionId: discussion.id 
+  }), [
+    timeLeft,
+    setTimeLeft,
+    isRunning,
+    mode,
+    handleTimeUp,
+    discussion.id
+  ]);
 
   const reviewDialogProps = useMemo(() => {
     if (!discussion.author) return null;
@@ -129,11 +140,14 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     };
   }, [
     isReviewOpen,
+    setIsReviewOpen,
     isTimeUp,
     discussion,
     sharedAnswers,
     editingPoint,
+    setEditingPoint,
     editedContent,
+    setEditedContent,
     handleSaveEdit,
     handleDelete,
     handleUndo,
