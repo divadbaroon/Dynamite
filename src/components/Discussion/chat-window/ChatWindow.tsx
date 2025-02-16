@@ -12,7 +12,6 @@ import AudioInput from '@/components/Discussion/audio/AudioInput'
 import { DeepgramContextProvider } from '@/components/Discussion/audio/DeepgramContextProvider'
 import { useDeepgram } from '@/components/Discussion/audio/DeepgramContextProvider'
 
-import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
 import { useUserConsent } from '@/lib/hooks/userConsent'
 import { useChatActions } from '@/lib/hooks/chatActions'
 
