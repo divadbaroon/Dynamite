@@ -1,9 +1,6 @@
 import { useState, useEffect, RefObject } from "react"
-
 import { toast } from "sonner"
-
 import { SupabaseUser, Message } from "@/types"
-
 import { createClient } from "@/utils/supabase/client"
 
 export function useGroupMessages(
@@ -13,6 +10,7 @@ export function useGroupMessages(
 ) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [isSubscribed, setIsSubscribed] = useState(false)
   const supabase = createClient()
 
   const scrollToBottom = () => {
@@ -29,6 +27,7 @@ export function useGroupMessages(
 
     const fetchMessages = async () => {
       try {
+        console.log('Fetching messages for group:', groupId)
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -40,34 +39,55 @@ export function useGroupMessages(
         setLoading(false)
         scrollToBottom()
       } catch (error) {
-        console.log('Error fetching messages:', error)
+        console.error('Error fetching messages:', error)
         toast.error("Failed to load messages") 
       }
     }
 
+    const channelName = `messages-${groupId}-${Date.now()}`
+    console.log('Setting up channel:', channelName)
+
     const channel = supabase
-      .channel(`group-${groupId}-messages`)
+      .channel(channelName)
       .on('postgres_changes', 
         { 
-          event: 'INSERT', 
+          event: '*', // Listen to all events
           schema: 'public', 
           table: 'messages',
           filter: `group_id=eq.${groupId}`
         },
         (payload) => {
-          const newMessage = payload.new as Message
-          setMessages(current => [...current, newMessage])
+          console.log('Message change received:', payload)
+          
+          if (payload.eventType === 'INSERT') {
+            setMessages(current => [...current, payload.new as Message])
+          } else if (payload.eventType === 'UPDATE') {
+            setMessages(current => 
+              current.map(msg => 
+                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+              )
+            )
+          }
           scrollToBottom()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Subscription status:', status)
+        setIsSubscribed(status === 'SUBSCRIBED')
+      })
 
     fetchMessages()
 
     return () => {
-      channel.unsubscribe()
+      console.log('Cleaning up subscription:', channelName)
+      supabase.removeChannel(channel)
     }
   }, [groupId, user, scrollAreaRef])
 
-  return { messages, loading, scrollToBottom }
+  return { 
+    messages, 
+    loading, 
+    scrollToBottom,
+    isSubscribed 
+  }
 }
