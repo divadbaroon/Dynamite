@@ -276,23 +276,20 @@ const AudioInput: React.FC<AudioInputProps> = ({
     try {
       if (connectionState === SOCKET_STATES.open) {
         disconnectFromDeepgram();
-        // Stop both recorders
+        // Stop streaming and utterance recorders
         if (streamingRecorderRef.current?.state === 'recording') {
           streamingRecorderRef.current.stop();
         }
         if (utteranceRecorderRef.current?.state === 'recording') {
           utteranceRecorderRef.current.stop();
         }
-        if (sessionRecorderRef.current?.state === 'recording') {
-          sessionRecorderRef.current.stop();
-        }
+        // Don't stop session recorder here
         mediaStream?.getTracks().forEach(track => track.stop());
         setMediaStream(null);
         utteranceChunksRef.current = [];
-        sessionChunksRef.current = [];
+        // Remove this line: sessionChunksRef.current = [];
         streamingRecorderRef.current = null;
         utteranceRecorderRef.current = null;
-        sessionRecorderRef.current = null;
       } else {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -302,9 +299,11 @@ const AudioInput: React.FC<AudioInputProps> = ({
         });
         setMediaStream(stream);
         
-        // Start session recording immediately
-        const sessionRecorder = createSessionRecorder(stream);
-        sessionRecorder.start();
+        // Only start a new session recorder if one isn't already storing chunks
+        if (!sessionRecorderRef.current || sessionChunksRef.current.length === 0) {
+          const sessionRecorder = createSessionRecorder(stream);
+          sessionRecorder.start();
+        }
         
         await connectToDeepgram({
           model: 'nova-2',
