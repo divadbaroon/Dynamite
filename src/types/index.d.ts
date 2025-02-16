@@ -109,10 +109,12 @@ export interface ChatWindowProps {
   groupId: string;
   discussionId: string;
   isTimeUp: boolean;
-  messages: Message[]
-  loading: boolean
-  scrollAreaRef: React.RefObject<HTMLDivElement>
-  user: User | null 
+  messages: Message[];
+  loading: boolean;
+  scrollAreaRef: React.RefObject<HTMLDivElement>;
+  user: User | null;
+  hasConsented: boolean;
+  userData: UserData | null;
 }
 
 export interface DiscussionGuideProps {
