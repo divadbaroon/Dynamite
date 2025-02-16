@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { UseTimerProps } from '@/types'
 
 export function useTimer({ discussion, mode, isRunning, onTimeUp }: UseTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(600)
   const [isTimeUp, setIsTimeUp] = useState(false)
+  const lastSyncTime = useRef<number>(Date.now())
+  const localOffset = useRef<number>(0)
 
   // Initial timer setup based on launch time
   useEffect(() => {
     if (!discussion?.has_launched) {
-      console.log('No launch time found')
       setTimeLeft(600)
       return
     }
@@ -18,12 +19,9 @@ export function useTimer({ discussion, mode, isRunning, onTimeUp }: UseTimerProp
     const elapsedSeconds = Math.floor((currentTime - launchTime) / 1000)
     const remainingTime = Math.max(0, 600 - elapsedSeconds)
     
-    console.log("Launched Time", launchTime)
-    console.log("Current Time", currentTime)
-    console.log("Elapsed Time", elapsedSeconds)
-    console.log("Remaining Time", remainingTime)
-
     setTimeLeft(remainingTime)
+    lastSyncTime.current = currentTime
+    localOffset.current = 0
   }, [discussion?.has_launched])
 
   // Timer sync and countdown
@@ -36,14 +34,23 @@ export function useTimer({ discussion, mode, isRunning, onTimeUp }: UseTimerProp
       const launchedAt = new Date(discussion.has_launched).getTime()
       const currentTime = Date.now()
       const elapsedSeconds = Math.floor((currentTime - launchedAt) / 1000)
-      const remainingTime = Math.max(0, 600 - elapsedSeconds)
-    
-      // Only update if the difference is more than 2 seconds
-      if (Math.abs(remainingTime - timeLeft) > 2) {
-        setTimeLeft(remainingTime)
+      const serverRemainingTime = Math.max(0, 600 - elapsedSeconds)
+      
+      // Calculate local time drift
+      const localElapsed = Math.floor((currentTime - lastSyncTime.current) / 1000)
+      const expectedTimeLeft = timeLeft - localElapsed
+      const drift = serverRemainingTime - expectedTimeLeft
+
+      // Only adjust if drift is significant (more than 1 second)
+      if (Math.abs(drift) > 1) {
+        // Gradually correct the drift over the next few seconds
+        localOffset.current = drift
+        setTimeLeft(serverRemainingTime)
       }
-    
-      if (remainingTime <= 0) {
+
+      lastSyncTime.current = currentTime
+
+      if (serverRemainingTime <= 0) {
         setIsTimeUp(true)
         onTimeUp?.()
       }
@@ -52,13 +59,23 @@ export function useTimer({ discussion, mode, isRunning, onTimeUp }: UseTimerProp
     // Initial sync
     syncTimeWithServer()
 
-    // Set up periodic sync
-    const syncInterval = setInterval(syncTimeWithServer, 5000)
+    // Set up periodic sync (less frequent)
+    const syncInterval = setInterval(syncTimeWithServer, 10000)
     
-    // Regular countdown
+    // Regular countdown with smooth drift correction
     const countdownInterval = setInterval(() => {
       setTimeLeft(prev => {
-        const newTime = Math.max(0, prev - 1)
+        let newTime = prev - 1
+        
+        // Apply a fraction of the offset correction
+        if (localOffset.current !== 0) {
+          const correction = localOffset.current > 0 ? -0.1 : 0.1
+          localOffset.current += correction
+          newTime += correction
+        }
+
+        newTime = Math.max(0, Math.round(newTime))
+        
         if (newTime <= 0) {
           setIsTimeUp(true)
           onTimeUp?.()
