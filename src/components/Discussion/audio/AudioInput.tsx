@@ -276,33 +276,46 @@ const AudioInput: React.FC<AudioInputProps> = ({
     try {
       if (connectionState === SOCKET_STATES.open) {
         disconnectFromDeepgram();
-        // Stop streaming and utterance recorders
+        // Pause recorders instead of stopping them
         if (streamingRecorderRef.current?.state === 'recording') {
-          streamingRecorderRef.current.stop();
+          streamingRecorderRef.current.pause();
         }
         if (utteranceRecorderRef.current?.state === 'recording') {
-          utteranceRecorderRef.current.stop();
+          utteranceRecorderRef.current.pause();
         }
-        // Don't stop session recorder here
-        mediaStream?.getTracks().forEach(track => track.stop());
-        setMediaStream(null);
-        utteranceChunksRef.current = [];
-        // Remove this line: sessionChunksRef.current = [];
-        streamingRecorderRef.current = null;
-        utteranceRecorderRef.current = null;
-      } else {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            noiseSuppression: true,
-            echoCancellation: true,
-          }
+        // Just disable tracks instead of stopping them
+        mediaStream?.getTracks().forEach(track => {
+          track.enabled = false;
         });
-        setMediaStream(stream);
-        
-        // Only start a new session recorder if one isn't already storing chunks
-        if (!sessionRecorderRef.current || sessionChunksRef.current.length === 0) {
-          const sessionRecorder = createSessionRecorder(stream);
-          sessionRecorder.start();
+      } else {
+        if (mediaStream) {
+          // Re-enable existing stream
+          mediaStream.getTracks().forEach(track => {
+            track.enabled = true;
+          });
+          
+          // Resume existing recorders
+          if (streamingRecorderRef.current?.state === 'paused') {
+            streamingRecorderRef.current.resume();
+          }
+          if (utteranceRecorderRef.current?.state === 'paused') {
+            utteranceRecorderRef.current.resume();
+          }
+        } else {
+          // Only create new stream if we don't have one
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              noiseSuppression: true,
+              echoCancellation: true,
+            }
+          });
+          setMediaStream(stream);
+          
+          // Only start a new session recorder if one isn't already storing chunks
+          if (!sessionRecorderRef.current || sessionChunksRef.current.length === 0) {
+            const sessionRecorder = createSessionRecorder(stream);
+            sessionRecorder.start();
+          }
         }
         
         await connectToDeepgram({
