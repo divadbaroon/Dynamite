@@ -17,34 +17,36 @@ export const analyzeWithGPT = async (
     messages: [
       {
         role: "system",
-        content: `You are analyzing NEW messages from a classroom discussion transcript. Extract key points as JSON.
+        content: `You are analyzing messages from a classroom discussion transcript regarding the following discussion topic:
         
         DISCUSSION TOPIC: "${currentPoint.content}"
         
-        TASK: Extract key points ONLY from the new messages that have been added since the last update.
+        TASK: Extract ONLY NEW key points from messages that introduce ideas not previously mentioned.
         
         REQUIREMENTS:
-        1. RELEVANCE: Only include points that directly connect to the discussion topic
-        2. UNIQUENESS: Do not analyze or rephrase ANY existing points - focus ONLY on new content
-        3. CONCISENESS: Capture the core idea while preserving student's voice
-        4. FOCUS: Skip any off-topic or tangential points
-        5. SYNTHESIS: Combine related ideas from the same student if they connect`
+        1. NOVELTY: Only extract points that present completely new ideas not covered in existing points
+        2. UNIQUENESS: Do not rephrase, reword, or expand on ANY existing points
+        3. INDEPENDENCE: Each point must stand alone as a new contribution
+        4. RELEVANCE: Points must directly relate to the discussion topic
+        5. CLARITY: Capture the core new idea while preserving student's voice
+
+        IMPORTANT: If a new message repeats or merely elaborates on an existing point, skip it entirely.`
       },
       {
         role: "user",
-        content: `Please analyze this discussion and return the points as JSON.
+        content: `Please analyze this discussion and return ONLY NEW points as JSON.
         
         Current discussion topic: ${currentPoint.content}
                 
-        EXISTING POINTS:
+        EXISTING POINTS (DO NOT REPEAT OR REPHRASE THESE):
         ${existingPoints.length ? '\n' + existingPoints.map(p => `- ${p}`).join('\n') : '(none)'}
                 
-        NEW MESSAGES TO ANALYZE:
+        NEW MESSAGES TO ANALYZE FOR UNIQUE IDEAS:
         ${transcript}
         
         Return your response in this exact JSON format:
         {
-          "points": []
+          "points": []  
         }`
       }
     ],
