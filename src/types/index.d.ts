@@ -337,3 +337,13 @@ export interface UseTranscriptAnalysisRunnerReturn {
     isAnalyzing: boolean
     status: string | null
 }
+
+export interface VerificationPoint {
+  point: string;
+  verified: boolean;
+  reason: string;
+}
+
+export interface VerificationResponse {
+  verifiedPoints: VerificationPoint[];
+}
