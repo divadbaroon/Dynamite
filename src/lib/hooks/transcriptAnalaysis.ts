@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react';
-import { Message } from '@/types';
+import { Message, SharedAnswers, DiscussionPoint } from '@/types';
 
 export function useTranscriptAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -10,12 +10,18 @@ export function useTranscriptAnalysis() {
   const analyzeTranscript = useCallback(async (
     sessionId: string, 
     groupId: string,
-    messages: Message[]
+    messages: Message[],
+    currentPoint: DiscussionPoint,
+    sharedAnswers: SharedAnswers
   ) => {
     try {
+      // Quick validation if needed
+      if (!currentPoint?.content || !messages?.length) {
+        throw new Error('Invalid input for analysis');
+      }
+
       setIsAnalyzing(true);
 
-      // Extract relevant message data for analysis
       const messageData = messages.map(msg => ({
         content: msg.content,
         userId: msg.user_id,
@@ -30,7 +36,9 @@ export function useTranscriptAnalysis() {
         },
         body: JSON.stringify({ 
           sessionId,
-          messages: messageData 
+          messages: messageData,
+          currentPoint,
+          sharedAnswers
         })
       });
 
