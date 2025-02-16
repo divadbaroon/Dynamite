@@ -66,26 +66,24 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     handleReview
   } = useReviewDialog({ isTimeUp });
 
-  // Early returns for invalid state
-  if (!discussion) return null;
-  if (!groupId) return <div>Missing group ID</div>;
-
-  const discussionPointsProps = useMemo(() => ({
-    discussion, // Now guaranteed to be non-null
-    mode,
-    currentPointIndex,
-    setCurrentPointIndex,
-    openItem,
-    sharedAnswers,
-    editingPoint,
-    setEditingPoint,
-    editedContent,
-    setEditedContent,
-    handleSaveEdit,
-    handleDelete,
-    handleUndo,
-    isRunning
-  }), [
+  const discussionPointsProps = useMemo(() => 
+    discussion ? {
+      discussion,
+      mode,
+      currentPointIndex,
+      setCurrentPointIndex,
+      openItem,
+      sharedAnswers,
+      editingPoint,
+      setEditingPoint,
+      editedContent,
+      setEditedContent,
+      handleSaveEdit,
+      handleDelete,
+      handleUndo,
+      isRunning
+    } : null
+  , [
     discussion,
     mode,
     currentPointIndex,
@@ -102,27 +100,27 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     isRunning
   ]);
 
-  const timerProps = useMemo(() => ({
+  const timerProps = useMemo(() => 
+    discussion ? {
+      timeLeft,
+      setTimeLeft,
+      isRunning,
+      mode,
+      isSubmitted: false,
+      onTimeUp: handleTimeUp,
+      discussionId: discussion.id
+    } : null
+  , [
+    discussion,
     timeLeft,
     setTimeLeft,
     isRunning,
     mode,
-    isSubmitted: false,
-    onTimeUp: handleTimeUp,
-    discussionId: discussion.id 
-  }), [
-    timeLeft,
-    setTimeLeft,
-    isRunning,
-    mode,
-    handleTimeUp,
-    discussion.id
+    handleTimeUp
   ]);
 
-  const reviewDialogProps = useMemo(() => {
-    if (!discussion.author) return null;
-    
-    return {
+  const reviewDialogProps = useMemo(() => 
+    discussion?.author ? {
       isOpen: isReviewOpen,
       setIsOpen: setIsReviewOpen,
       isTimeUp,
@@ -137,12 +135,12 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
       handleUndo,
       groupId,
       userId: discussion.author
-    };
-  }, [
+    } : null
+  , [
+    discussion,
     isReviewOpen,
     setIsReviewOpen,
     isTimeUp,
-    discussion,
     sharedAnswers,
     editingPoint,
     setEditingPoint,
@@ -153,6 +151,10 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
     handleUndo,
     groupId
   ]);
+
+  if (!discussion) return null;
+  if (!groupId) return <div>Missing group ID</div>;
+  if (!discussionPointsProps || !timerProps) return null;
 
   const cardHeight = CARD_HEIGHTS[mode as keyof typeof CARD_HEIGHTS] || CARD_HEIGHTS['waiting-room'];
 
