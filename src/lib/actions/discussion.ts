@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { SharedAnswers, DiscussionPoint, CreateDiscussionInput  } from '@/types'
+import { SharedAnswers, DiscussionPoint, CreateDiscussionInput, BulletPoint } from '@/types'
 
 // Then update your createDiscussion function signature
 export async function createDiscussion(data: CreateDiscussionInput) {
@@ -85,21 +85,12 @@ export async function deleteDiscussion(id: string) {
   const supabase = await createClient()
   
   try {
-    // First, delete all related shared_answers
-    const { error: answersError } = await supabase
-      .from('shared_answers')
-      .delete()
-      .eq('session_id', id)
+    const { error } = await supabase
+      .rpc('delete_discussion_cascade', {
+        discussion_id: id
+      })
 
-    if (answersError) throw answersError
-
-    // Then delete the session
-    const { error: sessionError } = await supabase
-      .from('sessions')
-      .delete()
-      .eq('id', id)
-
-    if (sessionError) throw sessionError
+    if (error) throw error
     
     return { error: null }
   } catch (error) {
@@ -379,5 +370,45 @@ export async function updateDiscussionPointTimestamps(discussionId: string) {
   } catch (error) {
     console.log('Error updating discussion point timestamps:', error);
     return { error };
+  }
+}
+
+export async function updateAnalysisAnswers(
+  sessionId: string,
+  groupId: string,
+  currentPointKey: string,
+  currentAnswers: SharedAnswers,
+  currentBullets: BulletPoint[],
+  newPoints: string[]
+) {
+  const supabase = await createClient()
+  
+  try {
+    const updatedAnswers = {
+      ...currentAnswers,
+      [currentPointKey]: [
+        ...currentBullets,
+        ...newPoints.map((content: string) => ({ content, isDeleted: false }))
+      ]
+    };
+
+    const { error } = await supabase
+      .from('shared_answers')
+      .upsert({
+        session_id: sessionId,
+        group_id: groupId,
+        answers: updatedAnswers,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'session_id,group_id',
+        ignoreDuplicates: false
+      });
+
+    if (error) throw error
+    
+    return { data: updatedAnswers, error: null }
+  } catch (error) {
+    console.log('Error updating analysis answers:', error)
+    return { data: null, error }
   }
 }
