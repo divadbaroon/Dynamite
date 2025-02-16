@@ -15,6 +15,7 @@ export function useTimer({ discussion, mode, isRunning, onTimeUp }: UseTimerProp
     }
     
     try {
+      // Check if launch time was provided
       const launchTime = discussion.has_launched ? new Date(discussion.has_launched).getTime() : null
       if (!launchTime) {
         console.log('Invalid launch time')
