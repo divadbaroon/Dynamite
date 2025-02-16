@@ -97,7 +97,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     }
 
     return (
-        <div className="flex h-screen">
+        <div className="flex h-[calc(100vh-64px)]">
             <div className="flex-1 p-4 overflow-hidden">
                 <DiscussionGuide 
                     mode="discussion" 
