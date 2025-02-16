@@ -52,27 +52,51 @@ export function useAnswerManagement({ discussionId, groupId, sharedAnswers }: Us
       toast.error("Missing discussion or group information")
       return
     }
-
+  
     try {
       const updatedAnswers = { ...sharedAnswers }
       const key = `point${pointIndex}`
       
-      if (typeof updatedAnswers[key][bulletIndex] === 'string') {
-        updatedAnswers[key] = updatedAnswers[key].map((content): BulletPoint => 
-          typeof content === 'string' ? { content, isDeleted: false } : content
-        )
+      // Make sure we preserve existing points array
+      if (!updatedAnswers[key] || !Array.isArray(updatedAnswers[key])) {
+        updatedAnswers[key] = []
       }
-      
-      updatedAnswers[key][bulletIndex] = {
-        ...updatedAnswers[key][bulletIndex] as BulletPoint,
-        content: newContent,
+  
+      // Adding a new point
+      if (bulletIndex === updatedAnswers[key].length) {
+        updatedAnswers[key] = [
+          ...updatedAnswers[key],
+          {
+            content: newContent,
+            isDeleted: false
+          }
+        ]
+      } 
+      // Editing existing point
+      else {
+        const currentPoints = [...updatedAnswers[key]]
+        
+        if (typeof currentPoints[bulletIndex] === 'string') {
+          currentPoints[bulletIndex] = {
+            content: currentPoints[bulletIndex] as string,
+            isDeleted: false
+          }
+        }
+        
+        currentPoints[bulletIndex] = {
+          ...(currentPoints[bulletIndex] as BulletPoint),
+          content: newContent,
+          isDeleted: false
+        }
+        
+        updatedAnswers[key] = currentPoints
       }
   
       const { error } = await saveAnswerEdit(discussionId, groupId, updatedAnswers)
   
       if (error) throw error
       setEditingPoint(null)
-      toast.success('Bullet point updated')
+      toast.success(bulletIndex === updatedAnswers[key].length - 1 ? 'New point added' : 'Bullet point updated')
     } catch (error) {
       console.error('Error updating bullet point:', error)
       toast.error('Failed to update bullet point')
