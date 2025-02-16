@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef } from 'react'
+import React, { useRef } from 'react'
 import ChatWindow from '@/components/Discussion/chat-window/ChatWindow'
 import DiscussionGuide from '@/components/Discussion/discussion-guide/DiscussionGuide'
 import { useDiscussion } from '@/lib/hooks/useDiscussion'
@@ -9,9 +9,17 @@ import { useGroupMessages } from '@/lib/hooks/groupMessages'
 import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
 import { useTranscriptAnalysisRunner } from "@/lib/hooks/useTranscriptAnalysisRunner"
 import { DiscussionClientProps } from '@/types'
+import { useUserConsent } from '@/lib/hooks/userConsent'
+import { Button } from "@/components/ui/button"
 
 export default function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
     const { user } = useSupabaseUser()
+    const { 
+        userData, 
+        hasConsented, 
+        isProcessingConsent, 
+        handleConsent 
+    } = useUserConsent(user)
 
     const {
         discussion,
@@ -29,10 +37,8 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef)
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
     
-    // Get current discussion point with type safety
     const currentPoint = discussion?.discussion_points?.[currentPointIndex] || null;
 
-    // Call the hook at the top level with conditional rendering later
     const { isAnalyzing, status } = useTranscriptAnalysisRunner({
         discussionId: discussion?.id || '',
         groupId,
@@ -43,34 +49,6 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     })
 
     const isLoading = discussionLoading || messagesLoading
-
-    useEffect(() => {
-        console.log('[DiscussionClient] Analysis dependencies updated:', {
-            currentPointIndex,
-            currentPoint: currentPoint?.content,
-            sharedAnswersKeys: Object.keys(sharedAnswers || {}),
-            messageCount: messages.length,
-            timestamp: new Date().toISOString()
-        })
-    }, [currentPoint, sharedAnswers, messages, currentPointIndex])
-
-    useEffect(() => {
-        const componentState = {
-            discussionId,
-            groupId,
-            status: isLoading ? 'loading' : error ? 'error' : 'ready',
-            timestamp: new Date().toISOString()
-        }
-
-        console.log('[DiscussionClient] Mount:', componentState)
-
-        return () => {
-            console.log('[DiscussionClient] Unmount:', {
-                ...componentState,
-                timestamp: new Date().toISOString()
-            })
-        }
-    }, [discussionId, groupId, isLoading, error])
 
     if (isLoading) {
         return (
@@ -92,6 +70,33 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         return (
             <div className="h-screen w-full flex items-center justify-center">
                 <div className="text-red-500 text-xl">Invalid discussion point</div>
+            </div>
+        )
+    }
+
+    // Show consent modal if not consented
+    if (!hasConsented) {
+        return (
+            <div className="h-screen w-full flex items-center justify-center">
+                <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+                    <h2 className="text-2xl font-semibold mb-4 text-center">Consent Required</h2>
+                    <p className="text-gray-600 mb-6 text-center">
+                        Please provide your consent to participate in the discussion.
+                    </p>
+                    <div className="flex justify-center">
+                        <Button
+                            variant="outline"
+                            onClick={() => handleConsent(true)}
+                            disabled={isProcessingConsent}
+                            className="w-full max-w-xs"
+                        >
+                            {isProcessingConsent ? (
+                                <div className="w-5 h-5 border-t-2 border-blue-500 rounded-full animate-spin mr-2" />
+                            ) : null}
+                            Review Consent Form
+                        </Button>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -119,13 +124,16 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
             </div>
             <div className="flex-1 p-4 overflow-hidden">
                 <ChatWindow 
+                    key={`${groupId}-${messages.length}`}
                     groupId={groupId} 
                     discussionId={discussionId}
                     messages={messages}
                     isTimeUp={isTimeUp}
                     loading={messagesLoading}
                     scrollAreaRef={scrollAreaRef}
-                    user={user} 
+                    user={user}
+                    hasConsented={hasConsented}
+                    userData={userData}
                 />
             </div>
         </div>
