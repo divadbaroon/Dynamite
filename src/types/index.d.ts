@@ -112,6 +112,7 @@ export interface ChatWindowProps {
   messages: Message[]
   loading: boolean
   scrollAreaRef: React.RefObject<HTMLDivElement>
+  user: User | null 
 }
 
 export interface DiscussionGuideProps {
