@@ -39,12 +39,12 @@ function ChatWindow({
   isTimeUp,
   messages,
   loading,
-  scrollAreaRef
+  scrollAreaRef,
+  user
 }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("")
   const [showConsentModal, setShowConsentModal] = useState(false)
 
-  const { user } = useSupabaseUser()
   const { 
     userData, 
     hasConsented, 

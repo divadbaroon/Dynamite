@@ -38,7 +38,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         groupId,
         messages,
         isTimeUp,
-        currentPoint: currentPoint!, // Type assertion since we'll check before using
+        currentPoint: currentPoint!, 
         sharedAnswers
     })
 
@@ -125,6 +125,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     isTimeUp={isTimeUp}
                     loading={messagesLoading}
                     scrollAreaRef={scrollAreaRef}
+                    user={user} 
                 />
             </div>
         </div>
