@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv'
 import { RequestBody, BulletPoint } from '@/types'
 import { getRecentMessages, formatTranscript } from '@/utils/transcriptAnalysis'
 import { analyzeWithGPT } from '@/lib/actions/openai'
+import { verifyBulletPoints } from '@/lib/actions/verifyBulletPoints'
 import { updateAnalysisAnswers } from '@/lib/actions/discussion'
 
 export async function POST(
@@ -69,31 +70,68 @@ export async function POST(
     const transcript = formatTranscript(recentMessages)
     console.log('Formatted transcript:', transcript)
 
+    // Initial analysis
     await kv.set(statusKey, 'Analyzing with GPT...')
     const content = await analyzeWithGPT(currentPoint, existingPoints, transcript)
     if (!content) throw new Error('No content received from OpenAI')
 
-    console.log('GPT Response:', content)
+    console.log('Initial GPT Response:', content)
 
     const aiResponse = JSON.parse(content)
-    const newPoints = aiResponse.points || []
+    const proposedPoints = aiResponse.points || []
 
-    console.log('Analysis results:', {
-      newPointsFound: newPoints.length,
-      newPoints
+    console.log('Initial analysis results:', {
+      proposedPointsFound: proposedPoints.length,
+      proposedPoints
     })
 
-    if (newPoints.length > 0) {
-      await kv.set(statusKey, 'Saving results...')
-      await updateAnalysisAnswers(
-        sessionId,
-        groupId,
-        currentPointKey,
-        sharedAnswers,
-        currentBullets,
-        newPoints
+    if (proposedPoints.length > 0) {
+      // Verify the proposed points
+      await kv.set(statusKey, 'Verifying points...')
+      const verificationResult = await verifyBulletPoints(
+        proposedPoints,
+        currentPoint,
+        existingPoints,
+        transcript
       )
-      console.log('Saved new points to database')
+
+      if (!verificationResult) {
+        throw new Error('No verification result received from OpenAI')
+      }
+
+      // At this point, TypeScript knows verificationResult is a string
+      const verificationResponse = JSON.parse(verificationResult)
+      interface VerificationPoint {
+        point: string;
+        verified: boolean;
+        reason: string;
+      }
+
+      const verifiedPoints = verificationResponse.verifiedPoints
+        .filter((point: VerificationPoint) => point.verified)
+        .map((point: VerificationPoint) => point.point)
+
+      console.log('Verification results:', {
+        totalProposed: proposedPoints.length,
+        verified: verifiedPoints.length,
+        rejectedCount: proposedPoints.length - verifiedPoints.length,
+        verifiedPoints
+      })
+
+      if (verifiedPoints.length > 0) {
+        await kv.set(statusKey, 'Saving verified points...')
+        await updateAnalysisAnswers(
+          sessionId,
+          groupId,
+          currentPointKey,
+          sharedAnswers,
+          currentBullets,
+          verifiedPoints
+        )
+        console.log('Saved verified points to database')
+      } else {
+        console.log('No points passed verification')
+      }
     }
 
     await kv.del(statusKey)
