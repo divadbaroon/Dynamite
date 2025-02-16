@@ -7,7 +7,7 @@ interface FooterContentProps {
   handleReview: () => void;
 }
 
-export const FooterContent = memo(({ 
+const FooterContentComponent = ({ 
   timeLeft, 
   formatTime, 
   handleReview 
@@ -16,4 +16,7 @@ export const FooterContent = memo(({
     <p className="text-lg font-semibold">Total Time Left: {formatTime(timeLeft)}</p>
     <Button onClick={handleReview}>Review Answers</Button>
   </div>
-));
+);
+
+FooterContentComponent.displayName = 'FooterContent';
+export const FooterContent = memo(FooterContentComponent);
