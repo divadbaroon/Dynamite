@@ -124,10 +124,8 @@ export interface DiscussionGuideProps {
   openItem: string
   loading?: boolean
   isTimeUp: boolean
-  setCurrentPointIndex: (index: number) => void
-  setIsRunning: (isRunning: boolean) => void
-  setOpenItem: (item: string | undefined) => void
-  setIsTimeUp: (isTimeUp: boolean) => void
+  setCurrentPointIndex: (index: number) => void;
+  setIsTimeUp: (value: boolean) => void;
 }
 
 export interface EditingPoint {
@@ -226,7 +224,6 @@ export interface DiscussionPointsProps {
   currentPointIndex: number;
   setCurrentPointIndex: (index: number) => void;
   openItem: string | undefined;
-  setOpenItem: (value: string | undefined) => void;
   sharedAnswers: SharedAnswers;
   editingPoint: { index: number; bulletIndex: number; } | null;
   setEditingPoint: (point: { index: number; bulletIndex: number; } | null) => void;
@@ -309,6 +306,34 @@ export interface MessageData {
 }
 
 export interface RequestBody {
-  sessionId: string
-  messages: MessageData[]
+  sessionId: string;
+  messages: MessageData[];
+  currentPoint: DiscussionPoint;   
+  sharedAnswers: SharedAnswers;    
+}
+export interface UseDiscussionReturn {
+  discussion: Discussion | null
+  loading: boolean
+  error: string | null
+  isRunning: boolean
+  isTimeUp: boolean
+  currentPointIndex: number
+  openItem: string
+  setIsRunning: (value: boolean) => void
+  setIsTimeUp: (value: boolean) => void
+  handleSetCurrentPoint: (index: number) => void 
+}
+
+export interface UseTranscriptAnalysisRunnerProps {
+    discussionId: string | undefined
+    groupId: string
+    messages: Message[] 
+    isTimeUp: boolean
+    currentPoint: DiscussionPoint;  
+    sharedAnswers: SharedAnswers; 
+}
+
+export interface UseTranscriptAnalysisRunnerReturn {
+    isAnalyzing: boolean
+    status: string | null
 }
