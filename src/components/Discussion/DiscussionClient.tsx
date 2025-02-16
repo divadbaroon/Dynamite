@@ -17,7 +17,8 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     const { 
         userData, 
         hasConsented, 
-        isProcessingConsent, 
+        isProcessingConsent,
+        isLoadingConsent,
         handleConsent 
     } = useUserConsent(user)
 
@@ -33,7 +34,9 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         handleSetCurrentPoint  
     } = useDiscussion(discussionId)
     
-    const scrollAreaRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
+    // Fix 1: Initialize with non-null assertion since we know this ref will be assigned to a div
+    const scrollAreaRef = useRef<HTMLDivElement>(null!)
+    
     const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef)
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
     
@@ -48,7 +51,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         sharedAnswers
     })
 
-    const isLoading = discussionLoading || messagesLoading
+    const isLoading = discussionLoading || messagesLoading || isLoadingConsent
 
     if (isLoading) {
         return (
@@ -74,8 +77,8 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         )
     }
 
-    // Show consent modal if not consented
-    if (!hasConsented) {
+    // Fix 2: Only show consent modal if we've confirmed user hasn't consented
+    if (!isLoadingConsent && hasConsented === false) {
         return (
             <div className="h-screen w-full flex items-center justify-center">
                 <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
@@ -132,7 +135,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     loading={messagesLoading}
                     scrollAreaRef={scrollAreaRef}
                     user={user}
-                    hasConsented={hasConsented}
+                    hasConsented={hasConsented ?? false} // Fix 3: Provide default false value
                     userData={userData}
                 />
             </div>

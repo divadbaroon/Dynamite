@@ -1,20 +1,22 @@
 import { useState, useEffect } from "react"
-
 import { toast } from "sonner"
-
 import { getUserById, updateUserConsent } from "@/lib/actions/user"
-
 import { SupabaseUser, UserData } from "@/types"
 
 export function useUserConsent(user: SupabaseUser | null) {
     const [userData, setUserData] = useState<UserData | null>(null)
     const [hasConsented, setHasConsented] = useState<boolean | null>(null)
     const [isProcessingConsent, setIsProcessingConsent] = useState(false)
+    const [isLoadingConsent, setIsLoadingConsent] = useState(true)
   
     useEffect(() => {
       const checkUserConsent = async () => {
-        if (!user) return
+        if (!user) {
+          setIsLoadingConsent(false)
+          return
+        }
         
+        setIsLoadingConsent(true)
         try {
           const data = await getUserById(user.id)
           if (data) {
@@ -24,6 +26,8 @@ export function useUserConsent(user: SupabaseUser | null) {
         } catch (error) {
           console.log('Error fetching user consent:', error)
           setHasConsented(false)
+        } finally {
+          setIsLoadingConsent(false)
         }
       }
     
@@ -48,5 +52,11 @@ export function useUserConsent(user: SupabaseUser | null) {
       }
     }
   
-    return { userData, hasConsented, isProcessingConsent, handleConsent }
+    return { 
+      userData, 
+      hasConsented, 
+      isProcessingConsent, 
+      isLoadingConsent,
+      handleConsent 
+    }
   }
