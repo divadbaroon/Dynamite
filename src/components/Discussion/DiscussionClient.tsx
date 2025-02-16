@@ -1,128 +1,78 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react'
-
+import React, { useEffect, useRef } from 'react'
 import ChatWindow from '@/components/Discussion/chat-window/ChatWindow'
 import DiscussionGuide from '@/components/Discussion/discussion-guide/DiscussionGuide'
-
-import { getDiscussionById } from '@/lib/actions/discussion'
-
+import { useDiscussion } from '@/lib/hooks/useDiscussion'
 import { useSharedAnswers } from '@/lib/hooks/sharedAnswers'
-import { useSessionSubscription } from '@/lib/hooks/sessionSubscription'
-import { useTranscriptAnalysis } from "@/lib/hooks/transcriptAnalaysis"
 import { useGroupMessages } from '@/lib/hooks/groupMessages'
 import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
-
-import { Discussion, DiscussionClientProps } from '@/types'
+import { useTranscriptAnalysisRunner } from "@/lib/hooks/useTranscriptAnalysisRunner"
+import { DiscussionClientProps } from '@/types'
 
 export default function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
-    const [discussion, setDiscussion] = useState<Discussion | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [currentPointIndex, setCurrentPointIndex] = useState(0)
-    const [isRunning, setIsRunning] = useState(false)
-    const [openItem, setOpenItem] = useState<string>(`item-${currentPointIndex}`)
-    const [isTimeUp, setIsTimeUp] = useState<boolean>(false)
+    const { user } = useSupabaseUser()
+
+    const {
+        discussion,
+        loading: discussionLoading,
+        error,
+        isRunning,
+        isTimeUp,
+        currentPointIndex,
+        openItem,
+        setIsTimeUp,
+        handleSetCurrentPoint  
+    } = useDiscussion(discussionId)
     
     const scrollAreaRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
-    const { user } = useSupabaseUser()
-    const messagesRef = useRef<typeof messages>([])
-    
-    // Get messages
     const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef)
-    
-    // Update messagesRef when messages change
-    useEffect(() => {
-        messagesRef.current = messages
-    }, [messages])
-    
-    // Get analysis functionality and status
-    const { analyzeTranscript, isAnalyzing, status } = useTranscriptAnalysis()
-    
-    // Get shared answers
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
+    
+    // Get current discussion point with type safety
+    const currentPoint = discussion?.discussion_points?.[currentPointIndex] || null;
 
-    // Fetch discussion data
-    useEffect(() => {
-        const fetchDiscussion = async () => {
-            try {
-                if (!discussionId) {
-                    setError("No discussion ID provided")
-                    return
-                }
-
-                const response = await getDiscussionById(discussionId)
-                
-                if (response.error) {
-                    throw response.error
-                }
-
-                if (!response.discussion) {
-                    setError("Discussion not found")
-                    return
-                }
-
-                setDiscussion(response.discussion)
-                setIsRunning(response.discussion.status === 'active')
-            } catch (error) {
-                console.error("Error fetching discussion:", error)
-                setError("Failed to load discussion data")
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchDiscussion()
-    }, [discussionId])
-
-    // Subscribe to session updates
-    useSessionSubscription({
-        sessionId: discussionId,
-        currentPointIndex,
-        setIsRunning,
-        setCurrentPointIndex,
-        setOpenItem
+    // Call the hook at the top level with conditional rendering later
+    const { isAnalyzing, status } = useTranscriptAnalysisRunner({
+        discussionId: discussion?.id || '',
+        groupId,
+        messages,
+        isTimeUp,
+        currentPoint: currentPoint!, // Type assertion since we'll check before using
+        sharedAnswers
     })
 
-    // Run transcript analysis on interval when discussion is active
+    const isLoading = discussionLoading || messagesLoading
+
     useEffect(() => {
-        let analysisInterval: NodeJS.Timeout | null = null
-        
-        if (discussion?.id && groupId && !isTimeUp) {
-            const runAnalysis = async () => {
-                try {
-                    // Use the ref to get latest messages
-                    const result = await analyzeTranscript(discussion.id, groupId, messagesRef.current)
-                    
-                    if (result.inProgress) {
-                        console.log('Analysis in progress:', result.message)
-                    }
-                } catch (error) {
-                    console.error('Analysis failed:', error)
-                }
-            }
-            
-            // Initial analysis
-            runAnalysis()
-            
-            // Set up interval (every 15 seconds)
-            analysisInterval = setInterval(runAnalysis, 15000)
+        console.log('[DiscussionClient] Analysis dependencies updated:', {
+            currentPointIndex,
+            currentPoint: currentPoint?.content,
+            sharedAnswersKeys: Object.keys(sharedAnswers || {}),
+            messageCount: messages.length,
+            timestamp: new Date().toISOString()
+        })
+    }, [currentPoint, sharedAnswers, messages, currentPointIndex])
+
+    useEffect(() => {
+        const componentState = {
+            discussionId,
+            groupId,
+            status: isLoading ? 'loading' : error ? 'error' : 'ready',
+            timestamp: new Date().toISOString()
         }
+
+        console.log('[DiscussionClient] Mount:', componentState)
 
         return () => {
-            if (analysisInterval) {
-                clearInterval(analysisInterval)
-            }
+            console.log('[DiscussionClient] Unmount:', {
+                ...componentState,
+                timestamp: new Date().toISOString()
+            })
         }
-    }, [discussion?.id, groupId, analyzeTranscript, isTimeUp]) // Removed messages and discussion.status from deps
+    }, [discussionId, groupId, isLoading, error])
 
-    const handleSetOpenItem = (item: string | undefined) => {
-        if (item !== undefined) {
-            setOpenItem(item)
-        }
-    }
-
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="h-screen w-full flex items-center justify-center">
                 <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin" />
@@ -138,22 +88,27 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         )
     }
 
+    if (!currentPoint) {
+        return (
+            <div className="h-screen w-full flex items-center justify-center">
+                <div className="text-red-500 text-xl">Invalid discussion point</div>
+            </div>
+        )
+    }
+
     return (
         <div className="flex h-screen">
             <div className="flex-1 p-4 overflow-hidden">
                 <DiscussionGuide 
-                    discussion={discussion} 
                     mode="discussion" 
+                    discussion={discussion} 
                     groupId={groupId}
                     sharedAnswers={sharedAnswers}
                     currentPointIndex={currentPointIndex}
                     isRunning={isRunning}
-                    openItem={openItem}
-                    loading={loading}
                     isTimeUp={isTimeUp}
-                    setCurrentPointIndex={setCurrentPointIndex}
-                    setIsRunning={setIsRunning}
-                    setOpenItem={handleSetOpenItem}
+                    openItem={openItem}
+                    setCurrentPointIndex={handleSetCurrentPoint}
                     setIsTimeUp={setIsTimeUp}
                 />
                 {isAnalyzing && status && (
@@ -166,8 +121,8 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                 <ChatWindow 
                     groupId={groupId} 
                     discussionId={discussionId}
-                    isTimeUp={isTimeUp}
                     messages={messages}
+                    isTimeUp={isTimeUp}
                     loading={messagesLoading}
                     scrollAreaRef={scrollAreaRef}
                 />
