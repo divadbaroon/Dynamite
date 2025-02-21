@@ -11,8 +11,11 @@ import { useTranscriptAnalysisRunner } from "@/lib/hooks/useTranscriptAnalysisRu
 import { DiscussionClientProps } from '@/types'
 
 export default function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
+
+    // Get current user information
     const { user } = useSupabaseUser()
 
+    // Hook that manages discussion progress and timing
     const {
         discussion,
         loading: discussionLoading,
@@ -25,14 +28,19 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         handleSetCurrentPoint  
     } = useDiscussion(discussionId)
     
+    // Used to maintain scroll position during updates
     const scrollAreaRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
+
+    // Hook for managing real-time messages
     const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef)
+
+    // Hook for managing real-time shared answers 
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
     
-    // Get current discussion point with type safety
+    // Get current discussion point
     const currentPoint = discussion?.discussion_points?.[currentPointIndex] || null;
 
-    // Call the hook at the top level with conditional rendering later
+    // Hook for running transcript analysis
     const { isAnalyzing, status } = useTranscriptAnalysisRunner({
         discussionId: discussion?.id || '',
         groupId,
@@ -44,6 +52,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
 
     const isLoading = discussionLoading || messagesLoading
 
+    // For logging analysis dependency updates
     useEffect(() => {
         console.log('[DiscussionClient] Analysis dependencies updated:', {
             currentPointIndex,
@@ -54,6 +63,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         })
     }, [currentPoint, sharedAnswers, messages, currentPointIndex])
 
+    // For component lifecycle logging
     useEffect(() => {
         const componentState = {
             discussionId,
@@ -72,6 +82,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         }
     }, [discussionId, groupId, isLoading, error])
 
+    // Loading state renderer
     if (isLoading) {
         return (
             <div className="h-screen w-full flex items-center justify-center">
@@ -80,6 +91,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         )
     }
 
+    // Error state renderer
     if (error) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center">
@@ -88,16 +100,10 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         )
     }
 
-    if (!currentPoint) {
-        return (
-            <div className="h-screen w-full flex items-center justify-center">
-                <div className="text-red-500 text-xl">Invalid discussion point</div>
-            </div>
-        )
-    }
-
     return (
         <div className="flex h-[calc(100vh-64px)]">
+
+            {/* Discussion Guide Panel */}
             <div className="flex-1 p-4 overflow-hidden">
                 <DiscussionGuide 
                     mode="discussion" 
@@ -111,12 +117,16 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     setCurrentPointIndex={handleSetCurrentPoint}
                     setIsTimeUp={setIsTimeUp}
                 />
+
+                {/* Analysis Status Indicator */}
                 {isAnalyzing && status && (
                     <div className="fixed bottom-4 right-4 bg-white p-2 rounded-md shadow-md text-sm text-gray-600">
                         Analysis Status: {status}
                     </div>
                 )}
             </div>
+
+            {/* Chat Window Panel */}
             <div className="flex-1 p-4 overflow-hidden">
                 <ChatWindow 
                     groupId={groupId} 
