@@ -113,8 +113,6 @@ export interface ChatWindowProps {
   loading: boolean;
   scrollAreaRef: React.RefObject<HTMLDivElement>;
   user: User | null;
-  hasConsented: boolean;
-  userData: UserData | null;
 }
 
 export interface DiscussionGuideProps {
