@@ -1,3 +1,5 @@
+import InstructorDashboard from "@/components/Instructor-Dashboard/InstructorDashboard"
+
 type Params = Promise<{ sessionId: string }>;
 
 export default async function MonitorPage({ 
@@ -8,8 +10,7 @@ export default async function MonitorPage({
   const resolvedParams = await params;
   return (
     <div>
-      {/* Empty for now */}
-      <p>Monitor page for session: {resolvedParams.sessionId}</p>
+      <InstructorDashboard sessionId={resolvedParams.sessionId} />
     </div>
   );
 }
