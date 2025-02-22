@@ -257,7 +257,12 @@ export function DiscussionContent({ discussionId }: DiscussionContentProps) {
                     </CardContent>
                   </Card>
                 </div>
-                <Button className="w-full">View Full Dashboard</Button>
+                <Button 
+                  onClick={() => router.push(`monitor/${discussionId}`)} 
+                  className="w-full"
+                >
+                  View Dashboard
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
