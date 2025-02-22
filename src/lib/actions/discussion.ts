@@ -3,7 +3,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { SharedAnswers, DiscussionPoint, CreateDiscussionInput, BulletPoint } from '@/types'
 
-// Then update your createDiscussion function signature
 export async function createDiscussion(data: CreateDiscussionInput) {
   const supabase = await createClient()
   
@@ -14,7 +13,6 @@ export async function createDiscussion(data: CreateDiscussionInput) {
       throw new Error('Not authenticated')
     }
 
-    // Calculate point durations and timestamps
     const pointDuration = Math.ceil(data.time_left / data.discussion_points.length)
     const now = new Date()
     
