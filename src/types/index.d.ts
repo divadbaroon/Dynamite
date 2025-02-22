@@ -348,3 +348,24 @@ export interface VerificationPoint {
 export interface VerificationResponse {
   verifiedPoints: VerificationPoint[];
 }
+
+//  ====== MONITOR
+
+export interface MonitorClientProps {
+  sessionId: string;
+}
+
+export interface GroupAnswer {
+  answer: string;
+  frequency: number;
+}
+
+export interface EthicalPerspective {
+  name: string;
+  value: number;
+}
+
+export interface ParticipationRate {
+  time: string;
+  rate: number;
+}
