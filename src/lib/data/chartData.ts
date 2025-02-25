@@ -1,5 +1,3 @@
-// Dynamic chart data that adapts based on the progress bar position
-// We'll have 3 discussion points, each with a 3-minute window
 
 export const COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c'];
 
