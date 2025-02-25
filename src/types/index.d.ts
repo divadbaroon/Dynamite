@@ -434,3 +434,11 @@ export interface GroupProgress {
   sentMessages: number
   isComplete: boolean
 }
+
+export interface TimeProgressBarProps {
+  timeFilter: number;
+  setTimeFilter: (value: number) => void;
+  currentTimeDisplay: string;
+  filteredCount: number;
+  totalCount: number;
+}
