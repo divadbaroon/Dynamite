@@ -32,7 +32,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     const scrollAreaRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
 
     // Hook for managing real-time messages
-    const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef)
+    const { messages, loading: messagesLoading } = useGroupMessages(groupId, user, scrollAreaRef, currentPointIndex)
 
     // Hook for managing real-time shared answers 
     const { sharedAnswers } = useSharedAnswers(discussionId, groupId)
@@ -136,6 +136,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     loading={messagesLoading}
                     scrollAreaRef={scrollAreaRef}
                     user={user} 
+                    currentPointIndex={currentPointIndex}
                 />
             </div>
         </div>

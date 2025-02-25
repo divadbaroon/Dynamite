@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from "react"
+import { useState, useEffect, RefObject, useMemo } from "react"
 import { toast } from "sonner"
 import { SupabaseUser, Message } from "@/types"
 import { createClient } from "@/utils/supabase/client"
@@ -6,7 +6,8 @@ import { createClient } from "@/utils/supabase/client"
 export function useGroupMessages(
   groupId: string, 
   user: SupabaseUser | null,
-  scrollAreaRef: RefObject<HTMLDivElement | null> 
+  scrollAreaRef: RefObject<HTMLDivElement | null>,
+  currentPointIndex?: number  
 ) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,8 +85,33 @@ export function useGroupMessages(
     }
   }, [groupId, user, scrollAreaRef])
 
+  // Filter messages by current point index if provided
+  const filteredMessages = useMemo(() => {
+    if (currentPointIndex === undefined) {
+      return messages; // Return all messages if no current point index
+    }
+    
+    return messages.filter(message => {
+      // Include messages that match current point or don't have a point set
+      // This preserves backward compatibility with existing messages
+      return message.current_point === currentPointIndex || message.current_point === undefined || message.current_point === null;
+    });
+  }, [messages, currentPointIndex]);
+
+  // For debugging
+  useEffect(() => {
+    if (currentPointIndex !== undefined) {
+      console.log(`Filtered messages for point ${currentPointIndex}:`, {
+        totalMessages: messages.length,
+        filteredMessages: filteredMessages.length,
+        firstMessageTimestamp: filteredMessages[0]?.created_at,
+        lastMessageTimestamp: filteredMessages[filteredMessages.length - 1]?.created_at
+      });
+    }
+  }, [filteredMessages, messages, currentPointIndex]);
+
   return { 
-    messages, 
+    messages: filteredMessages, 
     loading, 
     scrollToBottom,
     isSubscribed 
