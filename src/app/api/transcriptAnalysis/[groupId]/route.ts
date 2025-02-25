@@ -5,6 +5,7 @@ import { formatTranscript } from '@/utils/transcriptAnalysis'
 import { analyzeWithGPT } from '@/lib/actions/openai'
 import { verifyBulletPoints } from '@/lib/actions/verifyBulletPoints'
 import { updateAnalysisAnswers } from '@/lib/actions/discussion'
+import { updateCommonAnalysis } from '@/lib/actions/analysis'
 
 export async function POST(
   request: Request,
@@ -121,6 +122,7 @@ export async function POST(
       })
 
       if (verifiedPoints.length > 0) {
+        // Save verified points to shared answers
         await kv.set(statusKey, 'Saving verified points...')
         await updateAnalysisAnswers(
           sessionId,
@@ -131,6 +133,17 @@ export async function POST(
           verifiedPoints
         )
         console.log('Saved verified points to database')
+        
+        // Update common analysis for each verified point
+        await kv.set(statusKey, 'Updating common group answers...')
+        for (const point of verifiedPoints) {
+          await updateCommonAnalysis(
+            sessionId,
+            'group_answer',
+            point,
+          )
+        }
+        console.log('Updated common analysis for group answers')
       } else {
         console.log('No points passed verification')
       }
