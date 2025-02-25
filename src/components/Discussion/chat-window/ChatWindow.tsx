@@ -39,7 +39,8 @@ function ChatWindow({
   messages,
   loading,
   scrollAreaRef,
-  user
+  user,
+  currentPointIndex
 }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("")
   const [showConsentModal, setShowConsentModal] = useState(false)
@@ -59,6 +60,7 @@ function ChatWindow({
     userData,
     hasConsented,
     discussionId,
+    currentPointIndex,
     groupId,
     setNewMessage
   })
