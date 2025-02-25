@@ -490,3 +490,65 @@ export interface EthicalPerspective {
 export interface EthicalAnalysisResult {
   perspectives: EthicalPerspective[];
 }
+
+export interface MonitorClientProps {
+  sessionId: string;
+}
+
+export interface DiscussionPoint {
+  index: number;
+  content: string;
+  duration: number;
+  scheduled_start: string;
+}
+
+export interface BulletPoint {
+  content: string;
+  isDeleted: boolean;
+}
+
+export interface SharedAnswers {
+  [key: string]: BulletPoint[];
+}
+
+export interface EthicalPerspective {
+  framework: string;
+  explanation: string;
+}
+
+export interface PerspectiveEntry {
+  group_id: string;
+  user_id: string;
+  perspectives: EthicalPerspective[];
+  created_at: string;
+}
+
+export interface PerspectivesData {
+  [key: number]: PerspectiveEntry[];
+}
+
+export interface SharedAnswersData {
+  [key: string]: SharedAnswers;
+}
+
+export interface GroupAnswerData {
+  answer: string;
+  frequency: number;
+}
+
+export interface EthicalPerspectiveData {
+  name: string;
+  value: number;
+}
+
+export interface ParticipationData {
+  time: string;
+  rate: number;
+}
+
+export interface ChartData {
+  groupAnswerData: GroupAnswerData[];
+  ethicalPerspectiveData: EthicalPerspectiveData[];
+  participationData: ParticipationData[];
+  currentDiscussionPoint: number;
+}
