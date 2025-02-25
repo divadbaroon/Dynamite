@@ -4,15 +4,16 @@ import React, { createContext, useContext, useState } from 'react';
 import InstructorDashboard from './InstructorDashboard';
 import { TimeProgressBar } from './ProgressBar';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const TimeFilterContext = createContext({
   timeFilter: 100,
-  setTimeFilter: (_: number) => {}, 
+  setTimeFilter: (value: number) => {}, 
   currentTimeDisplay: '00:00',
   filteredMessagesCount: 0,
   totalMessagesCount: 0,
-  setCurrentTimeDisplay: (_: string) => {},
-  setFilteredMessagesCount: (_: number) => {},
-  setTotalMessagesCount: (_: number) => {},
+  setCurrentTimeDisplay: (value: string) => {},
+  setFilteredMessagesCount: (value: number) => {},
+  setTotalMessagesCount: (value: number) => {},
 });
 
 export function InstructorDashboardWrapper({ sessionId }: { sessionId: string }) {
