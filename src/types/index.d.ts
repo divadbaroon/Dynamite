@@ -301,7 +301,7 @@ export interface EditingPoint {
 
 export interface MessageData {
   content: string
-  timestamp: string
+  created_at: string
   username: string
   userId: string
 }
@@ -368,4 +368,24 @@ export interface EthicalPerspective {
 export interface ParticipationRate {
   time: string;
   rate: number;
+}
+
+export interface EthicalPerspective {
+  framework: string;
+  quote: string;
+  explanation: string;
+  username: string;
+}
+
+export interface PerspectiveEntry {
+  id: string;
+  session_id: string;
+  group_id: string;
+  current_point: number;
+  perspectives: EthicalPerspective[];
+  created_at: string;
+  groups: {
+      id: string;
+      name: string;
+  };
 }
