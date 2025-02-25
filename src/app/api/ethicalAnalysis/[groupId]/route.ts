@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv'
 import OpenAI from 'openai'
 import { RequestBody } from '@/types'
 import { saveEthicalPerspectives } from '@/lib/actions/ethical-perspectives'
+import { updateCommonAnalysis } from '@/lib/actions/analysis'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -154,6 +155,17 @@ export async function POST(
         currentPoint.index,
         perspectivesWithUsernames
       )
+      
+      // Update common analysis for each perspective
+      await kv.set(statusKey, 'Updating common ethical perspectives...')
+      for (const perspective of perspectivesWithUsernames) {
+        await updateCommonAnalysis(
+          sessionId,
+          'ethical_perspective',
+          perspective.quote,
+          perspective.framework
+        )
+      }
     } else {
       console.log('No ethical perspectives found in the analysis, skipping database save')
     }
