@@ -1,7 +1,6 @@
-
 export const COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c'];
 
-export function generateChartData(timeFilter: any) {
+export function generateChartData(timeFilter: number) {
   // Convert timeFilter (0-100) to minutes (0-10)
   const currentMinute = (timeFilter / 100) * 10;
   
@@ -28,9 +27,19 @@ export function generateChartData(timeFilter: any) {
   };
 }
 
-function generateGroupAnswerData(discussionPoint: any, progress: any) {
+interface GroupAnswerItem {
+  answer: string;
+  maxFrequency: number;
+}
+
+interface GroupAnswerResult {
+  answer: string;
+  frequency: number;
+}
+
+function generateGroupAnswerData(discussionPoint: number, progress: number): GroupAnswerResult[] {
   // Define base data for each discussion point
-  const baseData = [
+  const baseData: GroupAnswerItem[][] = [
     [ // Discussion Point 1 - Environmental Ethics
       { answer: "Implement stricter regulations", maxFrequency: 5 },
       { answer: "Increase public awareness", maxFrequency: 4 },
@@ -62,9 +71,19 @@ function generateGroupAnswerData(discussionPoint: any, progress: any) {
   }));
 }
 
-function generateEthicalPerspectiveData(discussionPoint: any, progress: any) {
+interface EthicalPerspectiveItem {
+  name: string;
+  maxValue: number;
+}
+
+interface EthicalPerspectiveResult {
+  name: string;
+  value: number;
+}
+
+function generateEthicalPerspectiveData(discussionPoint: number, progress: number): EthicalPerspectiveResult[] {
   // Define base data for each discussion point
-  const baseData = [
+  const baseData: EthicalPerspectiveItem[][] = [
     [ // Discussion Point 1 - Environmental Ethics
       { name: 'Deontological', maxValue: 35 },
       { name: 'Utilitarian', maxValue: 25 },
@@ -94,12 +113,22 @@ function generateEthicalPerspectiveData(discussionPoint: any, progress: any) {
   }));
 }
 
-function generateParticipationData(currentMinute: any) {
+interface TimelinePoint {
+  time: number;
+  rate: number;
+}
+
+interface ParticipationDataPoint {
+  time: string;
+  rate: number;
+}
+
+function generateParticipationData(currentMinute: number): ParticipationDataPoint[] {
   // Create participation rate data showing the evolution over time
   // with drops at discussion point transitions
   
   // Define key points in our participation timeline
-  const timeline = [
+  const timeline: TimelinePoint[] = [
     { time: 0, rate: 40 },  // Start
     { time: 1.5, rate: 80 }, // Mid-point of discussion 1
     { time: 3, rate: 65 },  // End of discussion 1
@@ -128,14 +157,14 @@ function generateParticipationData(currentMinute: any) {
 }
 
 // Export default data for initial load
-export const initialGroupAnswerData = [
+export const initialGroupAnswerData: GroupAnswerResult[] = [
   { answer: "Loading data...", frequency: 0 }
 ];
 
-export const initialEthicalPerspectiveData = [
+export const initialEthicalPerspectiveData: EthicalPerspectiveResult[] = [
   { name: 'Loading...', value: 0 }
 ];
 
-export const initialParticipationData = [
+export const initialParticipationData: ParticipationDataPoint[] = [
   { time: '0min', rate: 40 }
 ];

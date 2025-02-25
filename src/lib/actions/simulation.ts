@@ -1,8 +1,12 @@
 'use server'
 
 import { joinOrCreateGroup } from '@/lib/actions/group'
+import { SimulationMessage } from '@/types'
 
-export async function initializeSimulationGroups(sessionId: string, groupData: Record<string, any[]>) {
+export async function initializeSimulationGroups(
+  sessionId: string, 
+  groupData: Record<string, SimulationMessage[]>
+) {
   const groupNumbers = Object.keys(groupData).map(Number)
   const results = []
 
