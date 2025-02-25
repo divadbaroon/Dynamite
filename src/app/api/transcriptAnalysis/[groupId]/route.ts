@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { kv } from '@vercel/kv'
 import { RequestBody, BulletPoint } from '@/types'
-import { getRecentMessages, formatTranscript } from '@/utils/transcriptAnalysis'
+import { formatTranscript } from '@/utils/transcriptAnalysis'
 import { analyzeWithGPT } from '@/lib/actions/openai'
 import { verifyBulletPoints } from '@/lib/actions/verifyBulletPoints'
 import { updateAnalysisAnswers } from '@/lib/actions/discussion'
@@ -22,7 +22,11 @@ export async function POST(
       sessionId,
       messageCount: messages.length,
       currentPoint: currentPoint.content,
-      existingAnswersCount: Object.keys(sharedAnswers || {}).length
+      existingAnswersCount: Object.keys(sharedAnswers || {}).length,
+      messageTimeRange: {
+        oldest: messages[0]?.created_at,
+        newest: messages[messages.length - 1]?.created_at
+      }
     })
 
     lockKey = `analysis_lock:${groupId}_${sessionId}`
@@ -41,17 +45,10 @@ export async function POST(
 
     await kv.set(statusKey, 'Starting analysis...')
 
-    const recentMessages = getRecentMessages(messages)
-    console.log('Recent messages:', {
-      total: messages.length,
-      recent: recentMessages.length,
-      timeWindow: '20 seconds'
-    })
-
-    if (!recentMessages.length) {
+    if (!messages.length) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No new messages found in the last 20 seconds' 
+        error: 'No messages provided for analysis' 
       })
     }
 
@@ -61,14 +58,13 @@ export async function POST(
       .filter(bullet => bullet.content !== "(None)")
       .map(bullet => bullet.content)
     
+    const transcript = formatTranscript(messages)
     console.log('Analysis context:', {
       currentPointKey,
       existingPointsCount: existingPoints.length,
+      transcriptLength: transcript.length,
       existingPoints
     })
-
-    const transcript = formatTranscript(recentMessages)
-    console.log('Formatted transcript:', transcript)
 
     // Initial analysis
     await kv.set(statusKey, 'Analyzing with GPT...')
@@ -99,7 +95,6 @@ export async function POST(
         throw new Error('No verification result received from OpenAI')
       }
 
-      // At this point, TypeScript knows verificationResult is a string
       const verificationResponse = JSON.parse(verificationResult)
       interface VerificationPoint {
         point: string;
@@ -111,11 +106,18 @@ export async function POST(
         .filter((point: VerificationPoint) => point.verified)
         .map((point: VerificationPoint) => point.point)
 
+      const rejectedPoints = verificationResponse.verifiedPoints
+        .filter((point: VerificationPoint) => !point.verified)
+
       console.log('Verification results:', {
         totalProposed: proposedPoints.length,
         verified: verifiedPoints.length,
-        rejectedCount: proposedPoints.length - verifiedPoints.length,
-        verifiedPoints
+        rejectedCount: rejectedPoints.length,
+        verifiedPoints,
+        rejectionReasons: rejectedPoints.map((p: VerificationPoint) => ({
+          point: p.point,
+          reason: p.reason
+        }))
       })
 
       if (verifiedPoints.length > 0) {
