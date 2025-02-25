@@ -45,8 +45,7 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
         isAnalyzingTranscript,
         transcriptStatus,
         isAnalyzingEthics,
-        ethicsStatus,
-        ethicalAnalysisResult
+        ethicsStatus
     } = useAnalysisRunner({
         discussionId: discussion?.id || '',
         groupId,
