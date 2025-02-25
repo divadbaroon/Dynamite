@@ -7,7 +7,7 @@ import { useDiscussion } from '@/lib/hooks/useDiscussion'
 import { useSharedAnswers } from '@/lib/hooks/sharedAnswers'
 import { useGroupMessages } from '@/lib/hooks/groupMessages'
 import { useSupabaseUser } from '@/lib/hooks/supabaseUser'
-import { useTranscriptAnalysisRunner } from "@/lib/hooks/useTranscriptAnalysisRunner"
+import { useAnalysisRunner } from "@/lib/hooks/useAnalysisRunner"
 import { DiscussionClientProps } from '@/types'
 
 export default function DiscussionClient({ discussionId, groupId }: DiscussionClientProps) {
@@ -40,13 +40,19 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
     // Get current discussion point
     const currentPoint = discussion?.discussion_points?.[currentPointIndex] || null;
 
-    // Hook for running transcript analysis
-    const { isAnalyzing, status } = useTranscriptAnalysisRunner({
+    // Combined hook for running all analyses
+    const { 
+        isAnalyzingTranscript,
+        transcriptStatus,
+        isAnalyzingEthics,
+        ethicsStatus,
+        ethicalAnalysisResult
+    } = useAnalysisRunner({
         discussionId: discussion?.id || '',
         groupId,
         messages,
         isTimeUp,
-        currentPoint: currentPoint!, 
+        currentPoint: currentPoint!,
         sharedAnswers
     })
 
@@ -118,12 +124,19 @@ export default function DiscussionClient({ discussionId, groupId }: DiscussionCl
                     setIsTimeUp={setIsTimeUp}
                 />
 
-                {/* Analysis Status Indicator */}
-                {isAnalyzing && status && (
-                    <div className="fixed bottom-4 right-4 bg-white p-2 rounded-md shadow-md text-sm text-gray-600">
-                        Analysis Status: {status}
-                    </div>
-                )}
+                 {/* Analysis Status Indicators */}
+                <div className="fixed bottom-4 right-4 space-y-2">
+                    {isAnalyzingTranscript && transcriptStatus && (
+                        <div className="bg-white p-2 rounded-md shadow-md text-sm text-gray-600">
+                            Transcript Analysis: {transcriptStatus}
+                        </div>
+                    )}
+                    {isAnalyzingEthics && ethicsStatus && (
+                        <div className="bg-white p-2 rounded-md shadow-md text-sm text-gray-600">
+                            Ethical Analysis: {ethicsStatus}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Chat Window Panel */}
