@@ -96,6 +96,7 @@ export interface Message {
   created_at: string;
   audio_url?: string | null;  
   group_id?: string;        
+  current_point?: number;
 }
 
 // ====== DISCUSSION
@@ -112,6 +113,7 @@ export interface ChatWindowProps {
   messages: Message[];
   loading: boolean;
   scrollAreaRef: React.RefObject<HTMLDivElement>;
+  currentPointIndex: number 
   user: User | null;
 }
 
@@ -276,6 +278,7 @@ export interface UseChatActionsProps {
   hasConsented: boolean | null
   discussionId: string
   groupId: string
+  currentPointIndex: number 
   setNewMessage: (message: string) => void
 }
 
