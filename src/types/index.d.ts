@@ -363,11 +363,6 @@ export interface GroupAnswer {
   frequency: number;
 }
 
-export interface EthicalPerspective {
-  name: string;
-  value: number;
-}
-
 export interface ParticipationRate {
   time: string;
   rate: number;
@@ -391,13 +386,6 @@ export interface PerspectiveEntry {
       id: string;
       name: string;
   };
-}
-
-export interface EthicalPerspective {
-  framework: string
-  quote: string
-  explanation: string
-  username: string
 }
 
 export interface AnalysisResponse {
@@ -444,4 +432,60 @@ export interface TimeProgressBarProps {
   currentTimeDisplay: string;
   filteredCount: number;
   totalCount: number;
+}
+
+export interface UseEthicalAnalysisRunnerProps {
+  discussionId: string;
+  groupId: string;
+  messages: Message[];
+  isTimeUp: boolean;
+  currentPoint: DiscussionPoint;
+}
+
+export interface UseEthicalAnalysisRunnerReturn {
+  isAnalyzing: boolean;
+  status: string | null;
+  analysisResult: {
+      perspectives: Array<{
+          framework: string;
+          quote: string;
+          explanation: string;
+          username: string;
+      }>;
+  } | null;
+}
+
+export interface AnalysisRunnerProps {
+  discussionId: string;
+  groupId: string;
+  messages: Message[];
+  isTimeUp: boolean;
+  currentPoint: DiscussionPoint;
+  sharedAnswers: SharedAnswers;
+}
+
+export interface AnalysisRunnerReturn {
+  isAnalyzingTranscript: boolean;
+  transcriptStatus: string | null;
+  isAnalyzingEthics: boolean;
+  ethicsStatus: string | null;
+  ethicalAnalysisResult: {
+      perspectives: Array<{
+          framework: string;
+          quote: string;
+          explanation: string;
+          username: string;
+      }>;
+  } | null;
+}
+
+export interface EthicalPerspective {
+  framework: string;
+  quote: string;
+  explanation: string;
+  username: string;
+}
+
+export interface EthicalAnalysisResult {
+  perspectives: EthicalPerspective[];
 }
