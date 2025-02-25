@@ -34,8 +34,20 @@ export const formatTranscript = (messages: MessageData[]): string => {
   return messages
     .map((m, index) => {
       const messageNumber = index + 1;
-      const timestamp = new Date(m.created_at).toLocaleTimeString();
-      return `Message ${messageNumber} [${timestamp}] from ${m.username}:\n${m.content.trim()}`
+      
+      let timestampStr = 'Unknown time';
+      if (m.created_at) {
+        try {
+          const date = new Date(m.created_at);
+          if (!isNaN(date.getTime())) {
+            timestampStr = date.toLocaleTimeString();
+          }
+        } catch (e) {
+          console.error('Error parsing timestamp:', e);
+        }
+      }
+      
+      return `Message ${messageNumber} [${timestampStr}] from ${m.username}:\n${m.content.trim()}`
     })
     .join('\n\n---\n\n');
 }
