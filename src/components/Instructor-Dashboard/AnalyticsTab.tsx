@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { Discussion } from "@/types";
 import { COLORS } from '@/lib/data/chartData';
+import { fetchUsersBySession } from '@/lib/actions/user';
 
 // Define types for chart data
 interface FrameworkData {
@@ -57,12 +58,37 @@ function AnalyticsTab({
 }: AnalyticsTabProps) {
   // Add state for each question's data
   const [questionChartData, setQuestionChartData] = useState<ChartDataState[]>([]);
+  const [usersData, setUsersData] = useState<any[] | null>(null);
   
   // Calculate current discussion point based on time filter
   const currentDiscussionPoint = Math.min(
     Math.floor(timeFilter / 25),
     discussion?.discussion_points?.length ? discussion.discussion_points.length - 1 : 0
   );
+
+  // Fetch users data
+  useEffect(() => {
+    async function fetchUsers() {
+      if (!discussion?.id) return;
+      
+      try {
+        const { data, error } = await fetchUsersBySession(discussion.id);
+        if (error) {
+          console.error("Error fetching users:", error);
+          return;
+        }
+        
+        if (data) {
+          setUsersData(data);
+          console.log(`Fetched ${data.length} users for analytics`);
+        }
+      } catch (err) {
+        console.error("Exception during users fetch:", err);
+      }
+    }
+    
+    fetchUsers();
+  }, [discussion?.id]);
 
   // Timestamp helper function
   const getTimestampForQuestionTime = (questionIndex: number, progress: number): number => {
@@ -87,9 +113,30 @@ function AnalyticsTab({
     });
   };
 
+  // Calculate actual participation rate based on users' last_active timestamps
+  const calculateParticipationRateByTime = (timestamp: number): number => {
+    if (!usersData || usersData.length === 0) return 0;
+
+    // Count users who have been active up to the given timestamp
+    const participatedUsers = usersData.filter(user => {
+      if (!user.last_active) return false;
+      
+      try {
+        const lastActiveTime = new Date(user.last_active).getTime();
+        // User has participated if their last activity was before or at the timestamp
+        return lastActiveTime <= timestamp;
+      } catch (err) {
+        console.warn("Error parsing last_active for user in analytics:", user.id);
+        return false;
+      }
+    });
+    
+    return Math.round((participatedUsers.length / usersData.length) * 100);
+  };
+
   // Process data for time segments
   useEffect(() => {
-    if (!commonAnalysis || !discussion?.discussion_points) return;
+    if (!commonAnalysis || !discussion?.discussion_points || !usersData) return;
     
     try {
       const segmentDuration = 200; // seconds per question
@@ -153,7 +200,7 @@ function AnalyticsTab({
           groupAnswers = [{ answer: 'No data available', frequency: 0 }];
         }
         
-        // Generate participation data
+        // Generate participation data based on real user activity
         const participation: ParticipationData[] = [];
         if (questionActive) {
           for (let i = 0; i <= 10; i++) {
@@ -161,10 +208,17 @@ function AnalyticsTab({
               const seconds = Math.floor((i / 10) * segmentDuration);
               const minutes = Math.floor(seconds / 60);
               const remainingSecs = seconds % 60;
+              const timepoint = `${minutes}:${remainingSecs.toString().padStart(2, '0')}`;
+              
+              // Calculate timestamp for this point in the question
+              const pointTimestamp = getTimestampForQuestionTime(index, (i * 10));
+              
+              // Get actual participation rate from user data
+              const participationRate = calculateParticipationRateByTime(pointTimestamp);
               
               participation.push({
-                time: `${minutes}:${remainingSecs.toString().padStart(2, '0')}`,
-                rate: 50 + Math.min(i * 4, 40) // 50-90%
+                time: timepoint,
+                rate: participationRate
               });
             }
           }
@@ -187,7 +241,7 @@ function AnalyticsTab({
     } catch (error) {
       console.error('Error processing chart data:', error);
     }
-  }, [commonAnalysis, timeFilter, discussion]);
+  }, [commonAnalysis, timeFilter, discussion, usersData]);
 
   if (!discussion?.discussion_points || discussion.discussion_points.length === 0) {
     return <div>No discussion points available</div>;
@@ -220,7 +274,6 @@ function AnalyticsTab({
                 <CardHeader>
                   <CardTitle className="text-sm font-medium">
                     Group Answer
-                   
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -324,7 +377,7 @@ function AnalyticsTab({
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="time" />
                         <YAxis domain={[0, 100]} />
-                        <Tooltip />
+                        <Tooltip formatter={(value) => [`${value}%`, 'Participation']} />
                         <Line 
                           type="monotone" 
                           dataKey="rate" 
