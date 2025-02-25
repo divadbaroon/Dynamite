@@ -35,11 +35,37 @@ import {
 } from '@/lib/data/chartData';
 import { useTimeFilter } from './InstructorDashboardWrapper';
 
-import { EthicalPerspective, PerspectiveEntry } from "@/types"
+import { EthicalPerspective, PerspectiveEntry, SharedAnswers } from "@/types"
 
+interface GroupAnswerData {
+    answer: string;
+    frequency: number;
+}
+  
+interface EthicalPerspectiveData {
+    name: string;
+    value: number;
+}
+  
+interface ParticipationData {
+    time: string;
+    rate: number;
+}
+  
+interface ChartData {
+    groupAnswerData: GroupAnswerData[];
+    ethicalPerspectiveData: EthicalPerspectiveData[];
+    participationData: ParticipationData[];
+    currentDiscussionPoint: number;
+}
+  
 interface PerspectivesData {
     [key: number]: PerspectiveEntry[];
 }
+  
+interface SharedAnswersData {
+    [key: string]: SharedAnswers;
+  }
 
 function InstructorDashboard({ sessionId }: MonitorClientProps) {    
     const {
@@ -55,14 +81,14 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
     const [timeRemaining, setTimeRemaining] = useState<string>('10:00');
     const [messages, setMessages] = useState<Message[] | null>(null);
     const [filteredMessages, setFilteredMessages] = useState<Message[] | null>(null);
-    const [sharedAnswers, setSharedAnswers] = useState<any>(null);
+    const [sharedAnswers, setSharedAnswers] = useState<SharedAnswersData | null>(null);
     const [ethicalPerspectives, setEthicalPerspectives] = useState<PerspectivesData | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
     const [groupMapping, setGroupMapping] = useState<Record<string, number>>({});
     const [discussionStartTime, setDiscussionStartTime] = useState<Date | null>(null);
     const [discussionDuration, setDiscussionDuration] = useState<number>(0); // in milliseconds
     const [activeStudents, setActiveStudents] = useState<number>(54); // Start at 54 students
-    const [currentChartData, setCurrentChartData] = useState({
+    const [currentChartData, setCurrentChartData] = useState<ChartData>({
         groupAnswerData: initialGroupAnswerData,
         ethicalPerspectiveData: initialEthicalPerspectiveData,
         participationData: initialParticipationData,
@@ -71,7 +97,7 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
     const messageEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    const [chartDataHistory, setChartDataHistory] = useState<any[]>([]);
+    const [chartDataHistory, setChartDataHistory] = useState<ChartData[]>([]);
 
     // Update time remaining based on progress bar position
     useEffect(() => {
@@ -92,7 +118,7 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
             setChartDataHistory(prevHistory => [...prevHistory, currentChartData]);
         }
         setCurrentChartData(newChartData);
-    }, [timeFilter]);
+    }, [timeFilter, chartDataHistory.length, currentChartData]);
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -154,8 +180,9 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
 
                     console.log('Session Messages:', {
                         totalMessages: messagesData.length,
-                        messagesByGroup: messagesData.reduce((acc: any, msg: any) => {
-                            acc[msg.group_id] = (acc[msg.group_id] || 0) + 1;
+                        messagesByGroup: messagesData.reduce((acc: Record<string, number>, msg: Message) => {
+                            const groupId = msg.group_id || 'unassigned'; 
+                            acc[groupId] = (acc[groupId] || 0) + 1;
                             return acc;
                         }, {}),
                         timeRange: messagesData.length ? {
@@ -171,7 +198,7 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
                 if (answersError) {
                     console.error('Error fetching shared answers:', answersError);
                 } else {
-                    setSharedAnswers(answersData);
+                    setSharedAnswers(answersData as SharedAnswersData);
                     console.log('Shared Answers:', {
                         answersByGroup: Object.keys(answersData || {}).length,
                         rawAnswers: rawAnswers?.length,
@@ -254,11 +281,12 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
         });
     };
 
-    const groupedMessages = filteredMessages?.reduce((acc: Record<string, any[]>, msg: any) => {
-        if (!acc[msg.group_id]) {
-            acc[msg.group_id] = [];
+    const groupedMessages = filteredMessages?.reduce<Record<string, Message[]>>((acc, msg) => {
+        const groupId = msg.group_id || 'unassigned';  
+        if (!acc[groupId]) {
+            acc[groupId] = [];
         }
-        acc[msg.group_id].push(msg);
+        acc[groupId].push(msg);
         return acc;
     }, {}) || {};
 
@@ -357,7 +385,7 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
                                                             fill="#8884d8"
                                                             dataKey="value"
                                                         >
-                                                            {(questionChartData?.[index]?.ethicalPerspectiveData || []).map((entry: any, i: any) => (
+                                                            {(questionChartData?.[index]?.ethicalPerspectiveData || []).map((entry, i) => (
                                                                 <Cell 
                                                                     key={`cell-${i}`} 
                                                                     fill={index === currentChartData.currentDiscussionPoint ? 
@@ -405,6 +433,11 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
                 ) : <div>No discussion points available</div>}
             </>
         );
+    };
+
+    // Use messageEndRef in a function to avoid the "unused variable" warning
+    const scrollToBottom = () => {
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(() => {
@@ -475,6 +508,7 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
                                 <p className="mt-2 text-gray-700">{msg.content}</p>
                             </div>
                         ))}
+                        <div ref={messageEndRef} />
                     </CardContent>
                 </Card>
             ) : (
