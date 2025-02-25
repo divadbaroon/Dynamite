@@ -175,6 +175,7 @@ export interface UserData {
   session_id: string | null
   created_at: string
   consent_status: boolean
+  last_active?: string
 }
 
 // ====== AUDIO
