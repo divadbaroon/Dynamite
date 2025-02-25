@@ -389,3 +389,20 @@ export interface PerspectiveEntry {
       name: string;
   };
 }
+
+export interface EthicalPerspective {
+  framework: string
+  quote: string
+  explanation: string
+  username: string
+}
+
+export interface AnalysisResponse {
+  success: boolean
+  message: string
+  analysis?: {
+    perspectives: EthicalPerspective[]
+  }
+  error?: string
+  inProgress?: boolean
+}
