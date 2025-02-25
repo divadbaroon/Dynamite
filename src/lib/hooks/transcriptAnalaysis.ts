@@ -26,7 +26,8 @@ export function useTranscriptAnalysis() {
         content: msg.content,
         userId: msg.user_id,
         username: msg.username,
-        timestamp: msg.created_at ? new Date(msg.created_at).toISOString() : null
+        created_at: msg.created_at, 
+        timestamp: msg.created_at ? new Date(msg.created_at).toISOString() : null 
       }));
 
       const response = await fetch(`/api/transcriptAnalysis/${groupId}`, {
