@@ -4,16 +4,15 @@ import React, { createContext, useContext, useState } from 'react';
 import InstructorDashboard from './InstructorDashboard';
 import { TimeProgressBar } from './ProgressBar';
 
-// Create context for time filtering
 export const TimeFilterContext = createContext({
   timeFilter: 100,
-  setTimeFilter: {},
+  setTimeFilter: (_: number) => {}, 
   currentTimeDisplay: '00:00',
   filteredMessagesCount: 0,
   totalMessagesCount: 0,
-  setCurrentTimeDisplay: {},
-  setFilteredMessagesCount: {},
-  setTotalMessagesCount: {},
+  setCurrentTimeDisplay: (_: string) => {},
+  setFilteredMessagesCount: (_: number) => {},
+  setTotalMessagesCount: (_: number) => {},
 });
 
 export function InstructorDashboardWrapper({ sessionId }: { sessionId: string }) {
