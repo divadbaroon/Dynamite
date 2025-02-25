@@ -2,22 +2,47 @@ import { useEffect, useState } from 'react'
 import { createClient } from "@/utils/supabase/client"
 import type { SharedAnswers } from "@/types"
 import { fetchSharedAnswers } from "@/lib/actions/discussion"
+import { PostgrestError } from '@supabase/supabase-js'
+
+interface SharedAnswersResponse {
+  data: { answers: SharedAnswers } | null;
+  error: PostgrestError | null;
+}
 
 export function useSharedAnswers(discussionId?: string, groupId?: string) {
   const [sharedAnswers, setSharedAnswers] = useState<SharedAnswers>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    if (!discussionId || !groupId) return
+    if (!discussionId || !groupId) {
+      setLoading(false)
+      return
+    }
 
     const getSharedAnswers = async () => {
-      const { data, error } = await fetchSharedAnswers(discussionId, groupId)
-      
-      if (error) {
-        console.log('Error fetching shared answers:', error)
-      }
-      if (data?.answers && typeof data.answers === 'object') {
-        setSharedAnswers(data.answers as SharedAnswers)
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const result = await fetchSharedAnswers(discussionId, groupId) as SharedAnswersResponse
+        
+        if (result.error) {
+          console.error('Error fetching shared answers:', result.error)
+          setError(result.error.message || 'Failed to fetch shared answers')
+          return
+        }
+
+        if (result.data?.answers && typeof result.data.answers === 'object') {
+          setSharedAnswers(result.data.answers)
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch shared answers'
+        console.error('Unexpected error fetching shared answers:', err)
+        setError(errorMessage)
+      } finally {
+        setLoading(false)
       }
     }
 
@@ -47,5 +72,10 @@ export function useSharedAnswers(discussionId?: string, groupId?: string) {
     }
   }, [discussionId, groupId])
 
-  return { sharedAnswers, setSharedAnswers }
+  return { 
+    sharedAnswers, 
+    setSharedAnswers,
+    loading,
+    error
+  }
 }
