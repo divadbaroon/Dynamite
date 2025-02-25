@@ -1,4 +1,4 @@
-import InstructorDashboard from "@/components/Instructor-Dashboard/InstructorDashboard"
+import InstructorDashboardWrapper from "@/components/Instructor-Dashboard/InstructorDashboardWrapper"
 
 type Params = Promise<{ sessionId: string }>;
 
@@ -10,7 +10,7 @@ export default async function MonitorPage({
   const resolvedParams = await params;
   return (
     <div>
-      <InstructorDashboard sessionId={resolvedParams.sessionId} />
+      <InstructorDashboardWrapper sessionId={resolvedParams.sessionId} />
     </div>
   );
 }
