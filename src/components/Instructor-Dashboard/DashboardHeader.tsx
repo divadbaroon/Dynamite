@@ -1,31 +1,27 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, Users, UserCheck } from 'lucide-react';
+import { Clock, Users, UserCheck, Activity } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DashboardHeaderProps {
   activeGroups: number;
   activeStudents: number;
-  totalStudents?: number; // New prop for total students
+  totalStudents: number;
   timeRemaining: string;
+  participationRate?: number;
 }
 
 function DashboardHeader({ 
   activeGroups, 
   activeStudents, 
   totalStudents,
-  timeRemaining 
+  timeRemaining,
+  participationRate = 0
 }: DashboardHeaderProps) {
-  
-  // Calculate student participation percentage
-  const participationRate = totalStudents 
-    ? Math.round((activeStudents / totalStudents) * 100) 
-    : null;
-  
   return (
-    <div className="flex space-x-6">
-      <TooltipProvider>
-        <Card className="flex-1">
+    <TooltipProvider>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -37,14 +33,21 @@ function DashboardHeader({
           </CardContent>
         </Card>
 
-        <Card className="flex-1">
+        <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Active Students</p>
                 <div className="flex items-baseline space-x-2">
-                  <h3 className="text-2xl font-bold">{totalStudents}</h3>
-                 
+                  <h3 className="text-2xl font-bold">{activeStudents}</h3>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-sm text-gray-500">of {totalStudents}</p>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Currently active students</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
               <UserCheck className="h-8 w-8 text-blue-500" />
@@ -52,7 +55,7 @@ function DashboardHeader({
           </CardContent>
         </Card>
 
-        <Card className="flex-1">
+        <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -63,8 +66,8 @@ function DashboardHeader({
             </div>
           </CardContent>
         </Card>
-      </TooltipProvider>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
 
