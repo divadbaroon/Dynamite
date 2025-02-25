@@ -111,3 +111,30 @@ export async function getUserById(userId: string) {
     return null
   }
 }
+
+export async function fetchUsersBySession(sessionId: string) {
+  const supabase = await createClient()
+  
+  try {
+    // Query all users for the session
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('session_id', sessionId)
+    
+    if (error) throw error
+    
+    // Log results for debugging
+    console.log(`fetchUsersBySession results: Found ${data?.length || 0} users for session ${sessionId}`)
+    
+    // If you have data, log a sample to verify it's correct
+    if (data && data.length > 0) {
+      console.log("Sample user:", data[0])
+    }
+    
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error in fetchUsersBySession:', error)
+    return { data: null, error }
+  }
+}
