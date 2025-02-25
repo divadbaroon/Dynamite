@@ -31,7 +31,7 @@ const Navbar = ({ user }: NavbarProps) => {
           {/* Logo */}
           <div className="flex items-center gap-4">
             <Link 
-            href="/"
+            href="/home"
             className="inline-block transition-transform duration-300 hover:scale-105 mt-2"
             >
                 <EthicConvoLogo className="text-primary w-48 h-8 -mt-1 -ml-9" />
