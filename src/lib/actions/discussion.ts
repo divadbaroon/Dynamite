@@ -263,7 +263,7 @@ export async function updateCurrentPoint(discussionId: string, currentPoint: num
   }
 }
 
-export async function updateMessageWithAudioAndPoint(
+export async function updateMessageWithAudioUrl(
   discussionId: string,
   userId: string,
   transcript: string,
@@ -272,25 +272,12 @@ export async function updateMessageWithAudioAndPoint(
   const supabase = await createClient();
 
   try {
-    // 1) Fetch the current_point from the 'sessions' table
-    const { data: sessionData, error: sessionError } = await supabase
-      .from('sessions')
-      .select('current_point')
-      .eq('id', discussionId)
-      .single();
-
-    if (sessionError) {
-      throw sessionError;
-    }
-    const currentPoint = sessionData?.current_point ?? 0;
-
-    // 2) Update the latest matching message row
-    //    filtering by content, user_id, and session_id
+    // Just update the message with the audio URL
+    // The current_point is already set when the message was created
     const { error: updateError } = await supabase
       .from('messages')
       .update({ 
-        audio_url: pitchedUrl,
-        current_point: currentPoint
+        audio_url: pitchedUrl
       })
       .eq('content', transcript)
       .eq('user_id', userId)
@@ -304,7 +291,7 @@ export async function updateMessageWithAudioAndPoint(
 
     return { error: null };
   } catch (error) {
-    console.log('Error updating message with audio & current_point:', error);
+    console.log('Error updating message with audio URL:', error);
     return { error };
   }
 }
