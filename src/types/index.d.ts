@@ -406,3 +406,31 @@ export interface AnalysisResponse {
   error?: string
   inProgress?: boolean
 }
+
+export interface SimulatorPageProps {
+  discussionId: string
+}
+
+export interface SimulationMessage {
+  id: string
+  group_id: string
+  session_id: string
+  username: string
+  user_id: string
+  created_time: string
+  content: string
+}
+
+export interface SimulationData {
+  session_id: string
+  session_start_time: string
+  groups: {
+    [key: string]: SimulationMessage[]
+  }
+}
+
+export interface GroupProgress {
+  totalMessages: number
+  sentMessages: number
+  isComplete: boolean
+}
