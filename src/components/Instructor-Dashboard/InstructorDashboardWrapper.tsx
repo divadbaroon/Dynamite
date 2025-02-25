@@ -4,15 +4,18 @@ import React, { createContext, useContext, useState } from 'react';
 import InstructorDashboard from './InstructorDashboard';
 import { TimeProgressBar } from './ProgressBar';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const TimeFilterContext = createContext({
   timeFilter: 100,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setTimeFilter: (value: number) => {}, 
   currentTimeDisplay: '00:00',
   filteredMessagesCount: 0,
   totalMessagesCount: 0,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setCurrentTimeDisplay: (value: string) => {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setFilteredMessagesCount: (value: number) => {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setTotalMessagesCount: (value: number) => {},
 });
 
