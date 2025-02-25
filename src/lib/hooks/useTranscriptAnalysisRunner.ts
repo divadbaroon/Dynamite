@@ -18,8 +18,29 @@ export function useTranscriptAnalysisRunner({
     // All group messages reference
     const messagesRef = useRef<typeof messages>([])
     
+    // Track the current point to detect changes
+    const currentPointRef = useRef<number | null>(null)
+    
     // Init analysis functionality and status
     const { analyzeTranscript, isAnalyzing, status } = useTranscriptAnalysis()
+
+    // Reset counter when current point changes
+    useEffect(() => {
+        // If currentPoint is different than our saved ref, we've moved to a new discussion point
+        if (currentPoint && currentPoint.index !== currentPointRef.current) {
+            console.log('[useTranscriptAnalysisRunner] Current point changed:', {
+                from: currentPointRef.current,
+                to: currentPoint.index,
+                resettingMessageCounter: true
+            });
+            
+            // Reset the counter to 0 for the new point
+            lastAnalyzedMessageCount.current = 0;
+            
+            // Update our reference
+            currentPointRef.current = currentPoint.index;
+        }
+    }, [currentPoint]);
 
     // Update messagesRef when messages change
     useEffect(() => {
