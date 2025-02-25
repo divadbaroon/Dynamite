@@ -11,6 +11,7 @@ export function useChatActions({
   hasConsented,
   discussionId,
   groupId,
+  currentPointIndex,  
   setNewMessage
 }: UseChatActionsProps) {
   const supabase = createClient()
@@ -27,7 +28,8 @@ export function useChatActions({
           user_id: user.id,
           username: userData.username,
           content: messageContent.trim(),
-          audio_url: null
+          audio_url: null,
+          current_point: currentPointIndex  
         })
   
       if (error) throw error
@@ -37,7 +39,7 @@ export function useChatActions({
       console.log('Error sending message:', error)
       toast.error("Failed to send message")
     }
-  }, [user, hasConsented, userData, discussionId, groupId, supabase, setNewMessage])
+  }, [user, hasConsented, userData, discussionId, groupId, currentPointIndex, supabase, setNewMessage])
 
   const shouldGroupMessage = (currentMsg: Message, prevMsg: Message | null) => {
     if (!prevMsg) return false
