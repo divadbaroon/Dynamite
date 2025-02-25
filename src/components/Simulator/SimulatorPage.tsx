@@ -126,6 +126,7 @@ export default function SimulatorPage({ discussionId }: SimulatorPageProps) {
         const data = JSON.parse(text)
         await initializeGroups(data)
       } catch (err) {
+        console.error(err)
         setError('Failed to parse simulation data')
       }
     }
@@ -396,7 +397,7 @@ export default function SimulatorPage({ discussionId }: SimulatorPageProps) {
               
               <div className="space-y-2">
                 <div className="font-medium">Groups:</div>
-                {Object.entries(simData.groups).map(([groupId, messages]) => {
+                {Object.entries(simData.groups).map(([groupId]) => {
                   const progress = groupProgress[groupId];
                   const percentComplete = progress ? 
                     Math.round((progress.sentMessages / progress.totalMessages) * 100) : 0;
@@ -411,7 +412,7 @@ export default function SimulatorPage({ discussionId }: SimulatorPageProps) {
                     >
                       <div>
                         <div className="font-medium">
-                          Group {Object.entries(groupMapping).find(([_, v]) => v === groupId)?.[0] || groupId}
+                        qGroup {Object.entries(groupMapping).find(([v]) => v === groupId)?.[0] || groupId}
                         </div>
                         <div className="text-sm text-gray-500">
                           Messages: {progress?.sentMessages || 0} / {progress?.totalMessages || 0}
