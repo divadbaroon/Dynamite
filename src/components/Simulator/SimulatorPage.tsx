@@ -23,7 +23,9 @@ export default function SimulatorPage({ discussionId }: SimulatorPageProps) {
   const [groupMapping, setGroupMapping] = useState<Record<string, string>>({})
   const [groupProgress, setGroupProgress] = useState<Record<string, GroupProgress>>({})
 
-  const { analyzeEthicalPerspectives } = useEthicalAnalysis()
+  const { 
+      analyzeEthics, 
+  } = useEthicalAnalysis()
 
   const supabase = createClient()
   
@@ -177,7 +179,7 @@ export default function SimulatorPage({ discussionId }: SimulatorPageProps) {
             currentPoint,
             sharedAnswers || {}
           ),
-          analyzeEthicalPerspectives(
+          analyzeEthics(
             discussionId,
             groupId,
             recentMessages,
