@@ -333,6 +333,7 @@ export default function SimulatorPage({ discussionId }: SimulatorPageProps) {
       setError(null)
       toast.success("Simulation reset")
     } catch (error) {
+      console.log(error)
       setError('Failed to reset simulation')
     }
   }
