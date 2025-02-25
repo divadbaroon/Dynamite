@@ -59,7 +59,7 @@ export async function POST(
           role: "system",
           content: `You are analyzing classroom discussion messages to identify ethical perspectives.
           
-          TASK: Identify statements that align with these ethical frameworks:
+          TASK: Identify statements that align strongly with these ethical frameworks:
           - Utilitarian: Focus on maximizing well-being/happiness for the greatest number
           - Deontological: Focus on moral rules, duties, and rights
           - Virtue Ethics: Focus on character traits and moral excellence
