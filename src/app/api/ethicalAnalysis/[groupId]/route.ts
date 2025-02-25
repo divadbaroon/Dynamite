@@ -111,7 +111,7 @@ export async function POST(
     try {
       parsedAnalysis = JSON.parse(analysis)
     } catch (e) {
-      throw new Error('Failed to parse analysis response')
+      throw new Error(`Failed to parse analysis response: ${e}`)
     }
 
     // Store the analysis results
