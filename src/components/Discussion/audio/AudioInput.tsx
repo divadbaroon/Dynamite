@@ -10,7 +10,7 @@ import {
   useDeepgram,
 } from '@/components/Discussion/audio/DeepgramContextProvider';
 import { AudioInputProps } from "@/types"
-import { updateMessageWithAudioAndPoint } from '@/lib/actions/discussion'
+import { updateMessageWithAudioUrl } from '@/lib/actions/discussion'
 import { uploadAudioToSupabase } from "@/lib/actions/audioUpload"
 import { pitchShiftAudio } from "@/components/Discussion/audio/components/handleAudioPitch"
 
@@ -234,7 +234,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
               console.log('Upload completed:', pitchedUrl);
               
               // Update message with audio URL
-              await updateMessageWithAudioAndPoint(
+              await updateMessageWithAudioUrl(
                 discussionId,
                 userId,
                 transcript,
