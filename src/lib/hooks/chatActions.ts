@@ -20,7 +20,8 @@ export function useChatActions({
     if (!user || !messageContent.trim() || !hasConsented || !userData) return
   
     try {
-      const { error } = await supabase
+      // Insert the message
+      const { error: messageError } = await supabase
         .from('messages')
         .insert({
           session_id: discussionId,
@@ -32,7 +33,19 @@ export function useChatActions({
           current_point: currentPointIndex  
         })
   
-      if (error) throw error
+      if (messageError) throw messageError
+      
+      // Update the user's last active timestamp
+      const { error: activityError } = await supabase
+        .from('users')  
+        .update({ 
+          last_active: new Date().toISOString() 
+        })
+        .eq('id', user.id)
+        
+      if (activityError) {
+        console.log('Error updating user activity:', activityError)
+      }
   
       setNewMessage("")
     } catch (error) {
