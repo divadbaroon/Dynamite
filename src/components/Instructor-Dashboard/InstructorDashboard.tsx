@@ -97,6 +97,9 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
     const messageEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+    console.log(sharedAnswers)
+    console.log(ethicalPerspectives)
+
     const [chartDataHistory, setChartDataHistory] = useState<ChartData[]>([]);
 
     // Update time remaining based on progress bar position
@@ -433,11 +436,6 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
                 ) : <div>No discussion points available</div>}
             </>
         );
-    };
-
-    // Use messageEndRef in a function to avoid the "unused variable" warning
-    const scrollToBottom = () => {
-        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(() => {
