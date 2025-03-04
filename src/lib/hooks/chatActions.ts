@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { toast } from "sonner"
 import { createClient } from "@/utils/supabase/client"
 import { Message } from "@/types"
@@ -15,8 +15,22 @@ export function useChatActions({
   setNewMessage
 }: UseChatActionsProps) {
   const supabase = createClient()
+  
+  // Use a ref to always have access to the latest currentPointIndex
+  const currentPointIndexRef = useRef(currentPointIndex)
+  
+  // Update the ref whenever currentPointIndex changes
+  useEffect(() => {
+    currentPointIndexRef.current = currentPointIndex
+    console.log('[useChatActions] currentPointIndex updated:', currentPointIndex)
+  }, [currentPointIndex])
 
   const handleSendMessage = useCallback(async (messageContent: string) => {
+    // Use the ref's current value for the latest currentPointIndex
+    const pointIndex = currentPointIndexRef.current
+    
+    console.log('[handleSendMessage] Sending message with currentPointIndex:', pointIndex)
+    
     if (!user || !messageContent.trim() || !hasConsented || !userData) return
   
     try {
@@ -30,7 +44,7 @@ export function useChatActions({
           username: userData.username,
           content: messageContent.trim(),
           audio_url: null,
-          current_point: currentPointIndex  
+          current_point: pointIndex  
         })
   
       if (messageError) throw messageError
@@ -52,7 +66,7 @@ export function useChatActions({
       console.log('Error sending message:', error)
       toast.error("Failed to send message")
     }
-  }, [user, hasConsented, userData, discussionId, groupId, currentPointIndex, supabase, setNewMessage])
+  }, [user, hasConsented, userData, discussionId, groupId, supabase, setNewMessage]) // removed currentPointIndex from dependencies
 
   const shouldGroupMessage = (currentMsg: Message, prevMsg: Message | null) => {
     if (!prevMsg) return false
