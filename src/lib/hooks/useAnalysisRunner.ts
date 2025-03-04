@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useTranscriptAnalysis } from "./transcriptAnalaysis"
 import { useEthicalAnalysis } from "./useEthicalAnalysis"
 import { AnalysisRunnerProps, AnalysisRunnerReturn } from "@/types"
@@ -17,8 +17,24 @@ export function useAnalysisRunner({
     const lastTranscriptAnalyzedCount = useRef<number>(0)
     const lastEthicalAnalyzedCount = useRef<number>(0)
     
-    // All group messages reference
-    const messagesRef = useRef<typeof messages>([])
+    // Filter messages by current point index
+    const filteredMessages = useMemo(() => {
+        if (!currentPoint) {
+            return messages; // Return all messages if no current point
+        }
+        
+        return messages.filter(message => {
+            // Include messages that match current point or don't have a point set
+            return message.current_point === currentPoint.index || 
+                   message.current_point === undefined || 
+                   message.current_point === null;
+        });
+    }, [messages, currentPoint]);
+
+    console.log("FILTERED MESSAGES: ", filteredMessages)
+    
+    // All filtered group messages reference
+    const messagesRef = useRef<typeof filteredMessages>([])
     
     // Track the current point to detect changes
     const currentPointRef = useRef<number | null>(null)
@@ -56,19 +72,21 @@ export function useAnalysisRunner({
         }
     }, [currentPoint]);
 
-    // Update messagesRef when messages change
+    // Update messagesRef when filtered messages change
     useEffect(() => {
-        const newMessageCount = messages.length
+        const newMessageCount = filteredMessages.length
 
-        console.log('[useAnalysisRunner] Messages updated:', {
+        console.log('[useAnalysisRunner] Filtered messages updated:', {
             newMessageCount,
+            totalMessages: messages.length,
             lastTranscriptCount: lastTranscriptAnalyzedCount.current,
             lastEthicalCount: lastEthicalAnalyzedCount.current,
+            currentPointIndex: currentPoint?.index,
             timestamp: new Date().toISOString()
         })
 
-        messagesRef.current = messages
-    }, [messages])
+        messagesRef.current = filteredMessages
+    }, [filteredMessages, messages, currentPoint])
 
     // Run transcript analysis on interval
     useEffect(() => {
