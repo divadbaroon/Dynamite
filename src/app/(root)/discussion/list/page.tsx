@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link, Trash2, Users, ChevronDown } from "lucide-react";
-import { getAllDiscussions, deleteDiscussion, updateDiscussionStatus } from "@/lib/actions/discussion";
+import { getAllDiscussions, deleteDiscussion } from "@/lib/actions/discussion";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -36,56 +36,12 @@ export default function GroupDiscussions() {
       const { discussions, error } = await getAllDiscussions();
       if (error) throw error;
       
-      // Check if any active discussions have concluded
-      const updatedDiscussions = await checkCompletedDiscussions(discussions || []);
-      setDiscussions(updatedDiscussions || []);
+      setDiscussions(discussions || []);
     } catch (error) {
       console.log('Error loading discussions:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Function to check if active discussions have concluded
-  const checkCompletedDiscussions = async (discussionsList: Discussion[]) => {
-    const currentTime = new Date();
-    const updatedList = [...discussionsList];
-    
-    // Track if we need to update any discussions
-    let updatesNeeded = false;
-    
-    // Process each discussion to check if it has concluded
-    for (let i = 0; i < updatedList.length; i++) {
-      const discussion = updatedList[i];
-      
-      // Only check active discussions with a launch timestamp
-      if (discussion.status === 'active' && discussion.has_launched) {
-        const launchTime = new Date(discussion.has_launched);
-        const endTime = new Date(launchTime.getTime() + (discussion.time_left * 1000));
-        
-        // Check if discussion has concluded
-        if (currentTime > endTime) {
-          // Update status in the database
-          const { discussion: updatedDiscussion } = await updateDiscussionStatus(
-            discussion.id, 
-            'completed'
-          );
-          
-          // Update the local state if we got a response
-          if (updatedDiscussion) {
-            updatedList[i] = updatedDiscussion;
-          } else {
-            // Otherwise just update the status locally
-            updatedList[i] = { ...discussion, status: 'completed' };
-          }
-          
-          updatesNeeded = true;
-        }
-      }
-    }
-    
-    // Return the updated list if changes were made, or the original list
-    return updatesNeeded ? updatedList : discussionsList;
   };
 
   const handleDeleteClick = (discussionId: string) => {
