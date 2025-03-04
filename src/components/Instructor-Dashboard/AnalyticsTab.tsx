@@ -91,27 +91,45 @@ function AnalyticsTab({
   }, [discussion?.id]);
 
   // Timestamp helper function
-  const getTimestampForQuestionTime = (questionIndex: number, progress: number): number => {
-    const startTime = discussion?.has_launched 
-      ? new Date(discussion.has_launched).getTime() 
-      : new Date('2025-02-25T09:00:00.000Z').getTime();
-    
-    const segmentDuration = 200 * 1000; // 3.3 minutes in milliseconds
-    const questionStart = startTime + (questionIndex * segmentDuration);
-    const offset = (progress / 100) * segmentDuration;
-    
-    return questionStart + offset;
-  };
+  // Updated AnalyticsTab.tsx with fixed time-based filtering
 
-  // Filter entries by time range
-  const filterEntriesByTimeRange = (entries: any[], start: number, end: number): any[] => {
-    if (!Array.isArray(entries)) return [];
-    
-    return entries.filter(entry => {
+// Modified timestamp helper function to use consistent 10-minute session duration
+const getTimestampForQuestionTime = (questionIndex: number, progress: number): number => {
+  // Use the same base timestamp for session start
+  const startTime = discussion?.has_launched 
+    ? new Date(discussion.has_launched).getTime() 
+    : new Date('2025-02-25T09:00:00.000Z').getTime();
+  
+  // FIXED DURATION: 10 minutes (600 seconds) total for session
+  const TOTAL_SESSION_SECONDS = 600;
+  // Calculate segment duration based on number of questions
+  const questionsCount = discussion?.discussion_points?.length || 3;
+  const segmentDuration = (TOTAL_SESSION_SECONDS / questionsCount) * 1000; // milliseconds
+  
+  const questionStart = startTime + (questionIndex * segmentDuration);
+  const offset = (progress / 100) * segmentDuration;
+  
+  return questionStart + offset;
+};
+
+// Modified filter function with time buffer to ensure recent entries are included
+const filterEntriesByTimeRange = (entries: any[], start: number, end: number): any[] => {
+  if (!Array.isArray(entries)) return [];
+  
+  // Add a small buffer to catch entries that might be slightly ahead due to clock differences
+  const TIME_BUFFER_MS = 2000; // 2 seconds buffer
+  const adjustedEnd = end + TIME_BUFFER_MS;
+  
+  return entries.filter(entry => {
+    try {
       const time = new Date(entry.timestamp).getTime();
-      return time >= start && time <= end;
-    });
-  };
+      return time >= start && time <= adjustedEnd;
+    } catch (e) {
+      console.warn("Error parsing timestamp in analytics:", e);
+      return false;
+    }
+  });
+};
 
   // Calculate actual participation rate based on users' last_active timestamps
   const calculateParticipationRateByTime = (timestamp: number): number => {
@@ -139,9 +157,21 @@ function AnalyticsTab({
     if (!commonAnalysis || !discussion?.discussion_points || !usersData) return;
     
     try {
-      const segmentDuration = 200; // seconds per question
-      const totalDuration = discussion.discussion_points.length * segmentDuration;
-      const elapsedSeconds = (timeFilter / 100) * totalDuration;
+      // FIXED DURATION: Use 10 minutes (600 seconds) as base session duration
+      const TOTAL_SESSION_SECONDS = 600;
+      const questionsCount = discussion.discussion_points.length;
+      // Calculate seconds per question based on total duration
+      const segmentDuration = TOTAL_SESSION_SECONDS / questionsCount;
+      
+      // Calculate elapsed seconds consistently based on timeFilter percentage
+      const elapsedSeconds = (timeFilter / 100) * TOTAL_SESSION_SECONDS;
+      
+      console.log(`Processing analytics data at time filter ${timeFilter}%:`, {
+        totalSessionSeconds: TOTAL_SESSION_SECONDS,
+        questionsCount,
+        secondsPerQuestion: segmentDuration,
+        elapsedSeconds
+      });
       
       const newData: ChartDataState[] = [];
       
@@ -178,7 +208,7 @@ function AnalyticsTab({
             })
             .filter(item => item.value > 0);
         }
-
+  
         if (frameworks.length === 0) {
           frameworks = [{ name: 'No data', value: 0 }];
         }
@@ -205,6 +235,7 @@ function AnalyticsTab({
         if (questionActive) {
           for (let i = 0; i <= 10; i++) {
             if ((i * 10) <= questionProgress) {
+              // Use TOTAL_SESSION_SECONDS-based calculation for consistency
               const seconds = Math.floor((i / 10) * segmentDuration);
               const minutes = Math.floor(seconds / 60);
               const remainingSecs = seconds % 60;

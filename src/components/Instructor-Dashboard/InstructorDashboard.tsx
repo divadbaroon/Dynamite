@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { MonitorClientProps, Message } from "@/types";
@@ -13,13 +11,38 @@ import { useTimeFilter } from './InstructorDashboardWrapper';
 import { fetchGroupsBySession } from '@/lib/actions/groups';
 import { fetchUsersBySession } from '@/lib/actions/user'; 
 
-function InstructorDashboard({ sessionId }: MonitorClientProps) {
+// Add the updateTimeRemaining prop to the interface
+interface InstructorDashboardProps extends MonitorClientProps {
+    updateTimeRemaining?: (discussion: any) => void;
+}
+
+function InstructorDashboard({ sessionId, updateTimeRemaining }: InstructorDashboardProps) {
     const {
         timeFilter,
         setCurrentTimeDisplay,
         setFilteredMessagesCount,
-        setTotalMessagesCount
+        setTotalMessagesCount,
+        timeRemaining: contextTimeRemaining, // Get the timeRemaining directly from context
+        formatTime // Get the formatTime function from context
     } = useTimeFilter();
+
+    // Format the time remaining using the context's formatter
+    const formattedTimeRemaining = formatTime(contextTimeRemaining);
+
+    // Create a state to track formatted time for the header
+    const [headerTimeDisplay, setHeaderTimeDisplay] = useState(formattedTimeRemaining);
+
+    // Update the header time display whenever contextTimeRemaining changes
+    useEffect(() => {
+        setHeaderTimeDisplay(formatTime(contextTimeRemaining));
+    }, [contextTimeRemaining, formatTime]);
+
+    // Track if an initial load has happened
+    const isInitialLoadRef = useRef(true);
+    // Track if a refetch is in progress to prevent overlapping fetches
+    const isRefetchingRef = useRef(false);
+    // Last refetch timestamp
+    const lastRefetchTimeRef = useRef(Date.now());
 
     const {
         discussion,
@@ -34,7 +57,8 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
         commonAnalysis,
         groupMapping,
         activeStudents: hookActiveStudents,
-        timeRemaining
+        timeRemaining, // This is from useDiscussionData, not using this for display
+        refetch: refetchDiscussionData
     } = useDiscussionData({
         sessionId,
         timeFilter,
@@ -43,6 +67,40 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
         setTotalMessagesCount
     });
 
+    // Store updateTimeRemaining in a ref to break the dependency cycle
+    const updateTimeRemainingRef = useRef(updateTimeRemaining);
+    
+    // Update the ref when the prop changes
+    useEffect(() => {
+        updateTimeRemainingRef.current = updateTimeRemaining;
+    }, [updateTimeRemaining]);
+    
+    // Store previous discussion launch time to detect changes
+    const prevLaunchTimeRef = useRef<string | null>(null);
+    const prevDiscussionIdRef = useRef<string | null>(null);
+    
+    // Call updateTimeRemaining when discussion launch time changes
+    useEffect(() => {
+        if (!discussion) return;
+        
+        const currentLaunchTime = discussion.has_launched || null;
+        const currentId = discussion.id || null;
+        
+        // Only update if the launch time or ID has changed
+        if (currentLaunchTime && 
+            (currentLaunchTime !== prevLaunchTimeRef.current || 
+             currentId !== prevDiscussionIdRef.current)) {
+            
+            prevLaunchTimeRef.current = currentLaunchTime;
+            prevDiscussionIdRef.current = currentId;
+            
+            if (updateTimeRemainingRef.current) {
+                updateTimeRemainingRef.current(discussion);
+            }
+        }
+    }, [discussion]);
+
+    // Keep the rest of your component as is...
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
     const [groupsData, setGroupsData] = useState<any[] | null>(null);
     const [usersData, setUsersData] = useState<any[] | null>(null);
@@ -52,62 +110,119 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
     const [totalUsers, setTotalUsers] = useState<number>(0);
     const [participationRate, setParticipationRate] = useState<number>(0);
 
-    // Fetch groups data when the component mounts
-    useEffect(() => {
-        async function getGroups() {
-            setIsLoadingGroups(true);
-            try {
-                const { data, error } = await fetchGroupsBySession(sessionId);
-                
-                if (error) {
-                    console.error("Error fetching groups:", error);
-                    return;
-                }
-                
-                if (data) {
-                    setGroupsData(data);
-                    console.log("GROUPS DATA:", data);
-                    console.log("GROUPS COUNT:", data.length);
-                }
-            } catch (err) {
-                console.error("Exception during groups fetch:", err);
-            } finally {
+    // Function to fetch groups data
+    const fetchGroups = useCallback(async () => {
+        // Existing fetchGroups implementation...
+        try {
+            if (!isInitialLoadRef.current) {
+                // Don't show loading indicator for refetches to avoid UI flicker
                 setIsLoadingGroups(false);
             }
+            
+            const { data, error } = await fetchGroupsBySession(sessionId);
+            
+            if (error) {
+                console.error("Error fetching groups:", error);
+                return;
+            }
+            
+            if (data) {
+                setGroupsData(data);
+                if (isInitialLoadRef.current) {
+                    console.log("Initial GROUPS DATA:", data);
+                    console.log("GROUPS COUNT:", data.length);
+                } else {
+                    console.log("Refetched groups data, count:", data.length);
+                }
+            }
+        } catch (err) {
+            console.error("Exception during groups fetch:", err);
+        } finally {
+            setIsLoadingGroups(false);
+            isInitialLoadRef.current = false;
         }
-        
-        getGroups();
     }, [sessionId]);
 
-    // Fetch users data when the component mounts
-    useEffect(() => {
-        async function getUsers() {
-            setIsLoadingUsers(true);
-            try {
-                const { data, error } = await fetchUsersBySession(sessionId);
-
-                console.log("USERS", data)
-                
-                if (error) {
-                    console.error("Error fetching users:", error);
-                    return;
-                }
-                
-                if (data) {
-                    setUsersData(data);
-                    setTotalUsers(data.length);
-                    console.log("USERS DATA:", data);
-                    console.log("USERS COUNT:", data.length);
-                }
-            } catch (err) {
-                console.error("Exception during users fetch:", err);
-            } finally {
+    // Function to fetch users data
+    const fetchUsers = useCallback(async () => {
+        // Existing fetchUsers implementation...
+        try {
+            if (!isInitialLoadRef.current) {
+                // Don't show loading indicator for refetches to avoid UI flicker
                 setIsLoadingUsers(false);
             }
+            
+            const { data, error } = await fetchUsersBySession(sessionId);
+            
+            if (error) {
+                console.error("Error fetching users:", error);
+                return;
+            }
+            
+            if (data) {
+                setUsersData(data);
+                setTotalUsers(data.length);
+                if (isInitialLoadRef.current) {
+                    console.log("Initial USERS DATA:", data);
+                    console.log("USERS COUNT:", data.length);
+                } else {
+                    console.log("Refetched users data, count:", data.length);
+                }
+            }
+        } catch (err) {
+            console.error("Exception during users fetch:", err);
+        } finally {
+            setIsLoadingUsers(false);
+            isInitialLoadRef.current = false;
         }
-        
-        getUsers();
     }, [sessionId]);
+
+    // Function to refetch all data
+    const refetchAllData = useCallback(async () => {
+        // Existing refetchAllData implementation...
+        // Prevent multiple concurrent refetches
+        if (isRefetchingRef.current) return;
+        
+        const now = Date.now();
+        // Only refetch at most once every 5 seconds (throttle)
+        if (now - lastRefetchTimeRef.current < 5000) return;
+        
+        isRefetchingRef.current = true;
+        lastRefetchTimeRef.current = now;
+        
+        try {
+            console.log("Refetching all data...");
+            
+            // Fetch all data in parallel for efficiency
+            await Promise.all([
+                fetchGroups(),
+                fetchUsers(),
+                refetchDiscussionData?.() // Use optional chaining in case refetch isn't available
+            ]);
+            
+            console.log("Data refetch complete");
+        } catch (err) {
+            console.error("Error during data refetch:", err);
+        } finally {
+            isRefetchingRef.current = false;
+        }
+    }, [fetchGroups, fetchUsers, refetchDiscussionData]);
+
+    // The rest of your existing effects...
+    // Initial data fetch
+    useEffect(() => {
+        fetchGroups();
+        fetchUsers();
+    }, [fetchGroups, fetchUsers]);
+    
+    // Setup the auto-refetch interval (every 15 seconds)
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            refetchAllData();
+        }, 15000); // 15 seconds
+        
+        return () => clearInterval(intervalId);
+    }, [refetchAllData]);
 
     // Calculate active users and participation rate based on their last_active timestamp
     useEffect(() => {
@@ -197,7 +312,12 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
         );
     }, [filteredMessages]);
 
-    if (loading) {
+    // Add a manual refresh button handler
+    const handleManualRefresh = () => {
+        refetchAllData();
+    };
+
+    if (loading && isInitialLoadRef.current) {
         return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
     }
 
@@ -212,19 +332,28 @@ function InstructorDashboard({ sessionId }: MonitorClientProps) {
     return (
         <div className="container mx-auto p-6 space-y-8">
             {/* Page Header */}
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold">Discussion Monitor</h1>
-                <p className="text-gray-500">{discussion.title}</p>
-                <Separator className="my-4" />
+            <div className="space-y-2 flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold">Discussion Monitor</h1>
+                    <p className="text-gray-500">{discussion.title}</p>
+                </div>
+                <button 
+                    onClick={handleManualRefresh}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    disabled={isRefetchingRef.current}
+                >
+                    {isRefetchingRef.current ? 'Refreshing...' : 'Refresh Data'}
+                </button>
             </div>
+            <Separator className="my-4" />
 
-            {/* Top Metrics */}
+            {/* Top Metrics - Now using the formatted time from context */}
             <DashboardHeader 
                 activeGroups={totalGroupsCount || activeGroupsCount}
                 activeStudents={activeUsers}
                 totalStudents={totalUsers}
                 participationRate={participationRate}
-                timeRemaining={timeRemaining}
+                timeRemaining={headerTimeDisplay} // Use our formatted time from context
             />
 
             {/* Tabs */}

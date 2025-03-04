@@ -4,17 +4,57 @@ import React, { useEffect, useRef, useState } from 'react';
 import { SkipBack, SkipForward, Play, Pause } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
-import { TimeProgressBarProps } from "@/types"
+// Extended TimeProgressBarProps with new properties
+interface TimeProgressBarProps {
+  timeFilter: number;
+  setTimeFilter: React.Dispatch<React.SetStateAction<number>>; // Correct typing for setState
+  currentTimeDisplay: string;
+  filteredCount: number;
+  totalCount: number;
+  timeRemaining: number;
+  formatTime: (seconds: number) => string;
+  discussionStartTime?: Date | null;
+}
 
 export function TimeProgressBar({
   timeFilter,
   setTimeFilter,
+  currentTimeDisplay,
+  filteredCount,
+  totalCount,
+  timeRemaining,
+  formatTime,
+  discussionStartTime
 }: TimeProgressBarProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [duration] = useState("10:00"); // 10 minutes total duration
+  const [maxAllowedProgress, setMaxAllowedProgress] = useState(100);
   
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const totalDurationInSeconds = 600; // 10 minutes in seconds
+  
+  // Calculate and update the maximum allowed progress
+  useEffect(() => {
+    if (!discussionStartTime) return;
+    
+    const updateMaxAllowedProgress = () => {
+      const now = Date.now();
+      const launchTime = discussionStartTime.getTime();
+      const elapsedSeconds = Math.floor((now - launchTime) / 1000);
+      const elapsedPercentage = Math.min(100, (elapsedSeconds / totalDurationInSeconds) * 100);
+      
+      setMaxAllowedProgress(elapsedPercentage);
+    };
+    
+    // Initial calculation
+    updateMaxAllowedProgress();
+    
+    // Update every second
+    const intervalId = setInterval(updateMaxAllowedProgress, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [discussionStartTime]);
   
   // Handle auto-advance when playing
   useEffect(() => {
@@ -22,19 +62,24 @@ export function TimeProgressBar({
     
     if (isPlaying && !isDragging) {
       interval = setInterval(() => {
-        if (timeFilter >= 100) {
-          setIsPlaying(false);
-        } else {
-          // Increase by 0.1667 so that (0.1667/100)*10 minutes = 1 second per tick
-          setTimeFilter(Math.min(timeFilter + 0.1667, 100));
-        }
+        // Make TypeScript happy with the function signature
+        setTimeFilter((prevFilter: number) => {
+          // When playing, don't let it go past the max allowed
+          const nextValue = Math.min(prevFilter + 0.1667, maxAllowedProgress);
+          
+          if (nextValue >= maxAllowedProgress) {
+            setIsPlaying(false);
+          }
+          
+          return nextValue;
+        });
       }, 1000);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, isDragging, timeFilter, setTimeFilter]);
+  }, [isPlaying, isDragging, setTimeFilter, maxAllowedProgress]);
   
   // Handle drag interactions
   useEffect(() => {
@@ -43,7 +88,11 @@ export function TimeProgressBar({
       
       const rect = progressBarRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;
-      const percentage = (x / rect.width) * 100;
+      let percentage = (x / rect.width) * 100;
+      
+      // Don't allow dragging past the current actual time
+      percentage = Math.min(percentage, maxAllowedProgress);
+      
       setTimeFilter(Math.max(0, Math.min(percentage, 100)));
     };
 
@@ -56,7 +105,7 @@ export function TimeProgressBar({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, setTimeFilter]);
+  }, [isDragging, setTimeFilter, maxAllowedProgress]);
 
   const handleThumbMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -64,24 +113,41 @@ export function TimeProgressBar({
   };
   
   const handleTimeSkip = (direction: 'back' | 'forward') => {
-    const change = direction === 'back' ? -5 : 5;
-    const newValue = Math.max(0, Math.min(100, timeFilter + change));
-    setTimeFilter(newValue);
+    if (direction === 'back') {
+      // Can always go back
+      const newValue = Math.max(0, timeFilter - 5);
+      setTimeFilter(newValue);
+    } else {
+      // Can only go forward up to max allowed
+      const newValue = Math.min(maxAllowedProgress, timeFilter + 5);
+      setTimeFilter(newValue);
+    }
   };
   
   const handlePlayPause = () => {
-    if (timeFilter >= 100) {
+    if (timeFilter >= maxAllowedProgress) {
+      // If at the end, restart from beginning
       setTimeFilter(0);
     }
     setIsPlaying(!isPlaying);
   };
 
-  // Format time for display
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  // Determine what to show for time remaining
+  const getTimeRemainingDisplay = () => {
+    // If timeFilter is at 100%, discussion is over
+    if (timeFilter >= 100) return "0:00";
+    
+    // If we have a valid timeRemaining value, use it
+    if (typeof timeRemaining === 'number' && timeRemaining >= 0) {
+      return formatTime(timeRemaining);
+    }
+    
+    // Default fallback
+    return "0:00";
   };
+
+  // Is the forward button disabled?
+  const isForwardDisabled = timeFilter >= maxAllowedProgress;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 p-4 z-10">
@@ -102,6 +168,7 @@ export function TimeProgressBar({
               size="icon" 
               onClick={handlePlayPause}
               className="h-8 w-8"
+              disabled={isForwardDisabled && isPlaying}
             >
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
@@ -111,6 +178,7 @@ export function TimeProgressBar({
               size="icon" 
               onClick={() => handleTimeSkip('forward')}
               className="h-8 w-8"
+              disabled={isForwardDisabled}
             >
               <SkipForward className="h-4 w-4" />
             </Button>
@@ -119,7 +187,7 @@ export function TimeProgressBar({
           {/* Timeline display */}
           <div className="flex-grow flex items-center space-x-4">
             <span className="text-sm font-medium tabular-nums">
-              {formatTime(Math.floor(600 * timeFilter / 100))}
+              {currentTimeDisplay}
             </span>
 
             <div
@@ -131,6 +199,19 @@ export function TimeProgressBar({
                 className="absolute top-1/2 w-full h-[2px] bg-black"
                 style={{ transform: "translateY(-50%)" }}
               />
+              
+              {/* Indicator for current maximum allowed progress */}
+              {maxAllowedProgress < 100 && (
+                <div 
+                  className="absolute top-0 bottom-0 w-1 bg-red-500"
+                  style={{ 
+                    left: `${maxAllowedProgress}%`,
+                    height: '8px',
+                    marginTop: '-3px'
+                  }}
+                  title="Current time"
+                />
+              )}
 
               {/* Filled portion */}
               <div
@@ -153,6 +234,16 @@ export function TimeProgressBar({
               {duration}
             </span>
           </div>
+        </div>
+        
+        {/* Additional information display */}
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>
+            Messages: {filteredCount}/{totalCount}
+          </span>
+          <span>
+            Time Remaining: {getTimeRemainingDisplay()}
+          </span>
         </div>
       </div>
     </div>
