@@ -219,7 +219,7 @@ function InstructorDashboard({ sessionId, updateTimeRemaining }: InstructorDashb
     useEffect(() => {
         const intervalId = setInterval(() => {
             refetchAllData();
-        }, 15000); // 15 seconds
+        }, 1000); // 1 second
         
         return () => clearInterval(intervalId);
     }, [refetchAllData]);
