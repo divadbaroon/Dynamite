@@ -159,7 +159,7 @@ const AudioInput: React.FC<AudioInputProps> = ({
           sessionRecorder.start();
           
           await connectToDeepgram({
-            model: 'nova-2',
+            model: 'nova-3',
             interim_results: true,
             smart_format: true,
             filler_words: true,
