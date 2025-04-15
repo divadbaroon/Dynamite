@@ -191,4 +191,4 @@ const DiscussionGuide: FC<DiscussionGuideProps> = ({
   );
 };
 
-export default memo(DiscussionGuide);
+export default DiscussionGuide;
