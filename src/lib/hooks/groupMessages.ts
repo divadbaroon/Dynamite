@@ -13,17 +13,22 @@ export function useGroupMessages(
   const [isSubscribed, setIsSubscribed] = useState(false)
   const supabase = createClient()
 
+  // Improved scroll function
   const scrollToBottom = () => {
-    if (scrollAreaRef?.current) {
-      const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollElement) {
-        scrollElement.scrollTop = scrollElement.scrollHeight
+    setTimeout(() => {
+      if (scrollAreaRef?.current) {
+        const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
+        if (scrollElement) {
+          scrollElement.scrollTop = scrollElement.scrollHeight
+        }
       }
-    }
+    }, 50) // Small delay to ensure DOM updates
   }
 
+  // Handle fetching messages and setting up subscription
   useEffect(() => {
     if (!groupId || !user) return
+    let isMounted = true
 
     const fetchMessages = async () => {
       try {
@@ -35,23 +40,26 @@ export function useGroupMessages(
           .order('created_at', { ascending: true })
 
         if (error) throw error
-        setMessages((data || []) as Message[])
-        setLoading(false)
-        scrollToBottom()
+        if (isMounted) {
+          setMessages((data || []) as Message[])
+          setLoading(false)
+          scrollToBottom()
+        }
       } catch (error) {
         console.error('Error fetching messages:', error)
         toast.error("Failed to load messages") 
       }
     }
 
-    const channelName = `messages-${groupId}-${Date.now()}`
+    // Use a stable channel name that won't change between component mounts
+    const channelName = `messages-${groupId}`
     console.log('Setting up channel:', channelName)
 
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', 
         { 
-          event: '*', // Listen to all events
+          event: '*',
           schema: 'public', 
           table: 'messages',
           filter: `group_id=eq.${groupId}`
@@ -60,38 +68,54 @@ export function useGroupMessages(
           console.log('Message change received:', payload)
           
           if (payload.eventType === 'INSERT') {
-            setMessages(current => [...current, payload.new as Message])
+            if (isMounted) {
+              setMessages(current => [...current, payload.new as Message])
+              scrollToBottom()
+            }
           } else if (payload.eventType === 'UPDATE') {
-            setMessages(current => 
-              current.map(msg => 
-                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+            if (isMounted) {
+              setMessages(current => 
+                current.map(msg => 
+                  msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+                )
               )
-            )
+            }
           }
-          scrollToBottom()
         }
       )
       .subscribe((status) => {
         console.log('Subscription status:', status)
-        setIsSubscribed(status === 'SUBSCRIBED')
+        if (isMounted) {
+          setIsSubscribed(status === 'SUBSCRIBED')
+        }
       })
 
     fetchMessages()
 
     return () => {
       console.log('Cleaning up subscription:', channelName)
+      isMounted = false
       supabase.removeChannel(channel)
     }
-  }, [groupId, user, scrollAreaRef])
+  }, [groupId, user]) // Removed scrollAreaRef from dependencies
 
-  // For debugging
+  // Debug logging for messages updates
   useEffect(() => {
-    console.log(`Messages updated:`, {
-      totalMessages: messages.length,
-      firstMessageTimestamp: messages[0]?.created_at,
-      lastMessageTimestamp: messages[messages.length - 1]?.created_at
-    });
+    if (messages.length > 0) {
+      console.log(`Messages updated:`, {
+        totalMessages: messages.length,
+        firstMessageTimestamp: messages[0]?.created_at,
+        lastMessageTimestamp: messages[messages.length - 1]?.created_at
+      });
+    }
   }, [messages]);
+
+  // Separate effect for scrolling when messages update
+  useEffect(() => {
+    if (messages.length > 0 && !loading) {
+      scrollToBottom()
+    }
+  }, [messages.length, loading])
 
   return { 
     messages, 
