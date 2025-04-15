@@ -20,16 +20,19 @@ export const analyzeWithGPT = async (
       
       DISCUSSION TOPIC: "${currentPoint.content}"
       
-      TASK: Extract ONLY NEW key points from messages that introduce ideas not previously mentioned.
+      TASK: Extract key points from the discussion that contribute to understanding the topic.
       
       REQUIREMENTS:
-      1. NOVELTY: Only extract points that present completely new ideas not covered in existing points
-      2. UNIQUENESS: Do not rephrase, reword, or expand on ANY existing points
-      3. INDEPENDENCE: Each point must stand alone as a new contribution
-      4. RELEVANCE: Points must directly relate to the discussion topic
-      5. CLARITY: Capture the core new idea while preserving student's voice
-
-      IMPORTANT: If a new message repeats or merely elaborates on an existing point, skip it entirely.`
+      1. RELEVANCE: Points must relate to the discussion topic
+      2. CLARITY: Capture ideas while preserving students' voices
+      3. VALUE: Focus on points that add value to the discussion
+      4. INCLUSIVITY: Include different perspectives shared in the discussion
+      
+      It's OK if points:
+      - Build upon or extend existing ideas with new insights
+      - Approach the topic from a different angle
+      - Provide supporting examples for existing ideas
+      - Express similar ideas in substantially different ways`
     },
     {
       role: "user" as const,

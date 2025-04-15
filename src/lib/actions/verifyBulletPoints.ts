@@ -17,21 +17,25 @@ export const verifyBulletPoints = async (
       {
         role: "system",
         content: `You are a verification system for classroom discussion bullet points.
-        Your task is to verify each proposed bullet point meets the following criteria:
+        Your task is to verify each proposed bullet point with a balanced approach:
 
         CURRENT DISCUSSION TOPIC: "${currentPoint.content}"
 
         VERIFICATION CRITERIA:
-        1. RELEVANCE: The point must clearly relate to the discussion topic and address some aspect of the question
-        2. EVIDENCE: The point must be based on ideas expressed in the transcript
-        3. UNIQUENESS: The point should not duplicate existing points, though it may build upon them
-        4. COMPLETENESS: The point should express a complete thought or proposal
+        1. RELEVANCE: The point should relate to the discussion topic
+        2. EVIDENCE: The point should be based on ideas mentioned in the transcript
+        3. VALUE: The point should contribute something worthwhile to the discussion
         
-        For each point, verify:
-        - Is it clearly related to the discussion topic?
-        - Is it supported by the discussion transcript?
-        - Is it different from existing points?
-        - Does it express a complete idea?
+        Be inclusive and generous in your verification:
+        - Accept points that build upon existing ideas with new insights
+        - Accept points that rephrase an idea if it adds clarity
+        - Accept points that provide examples or context for existing ideas
+        - Accept points that represent different perspectives on the topic
+        
+        Only reject points that are:
+        - Completely unrelated to the topic
+        - Not supported by any part of the transcript
+        - Exact duplicates of existing points without any new information
         
         Return for each point:
         - verified: boolean (true if meets criteria)
