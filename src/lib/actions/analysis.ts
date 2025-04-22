@@ -145,9 +145,14 @@ export async function getCommonAnalysisBySession(
           frameworks[item.framework] = item.frequencies;
         } 
         else if (item.analysis_type === 'group_answer') {
-          // Use a shortened content as the key
-          const contentKey = item.content.substring(0, 30) + (item.content.length > 30 ? '...' : '');
-          groupAnswers[contentKey] = item.frequencies;
+          // Use the truncated content as the key
+          const truncatedContent = item.content.substring(0, 30) + (item.content.length > 30 ? '...' : '');
+          groupAnswers[truncatedContent] = item.frequencies;
+          
+          // Also store using a special key format that includes the full text
+          // Format: "truncated_text|FULL_TEXT_MARKER|full_text"
+          const specialKey = truncatedContent + '|FULL_TEXT_MARKER|' + item.content;
+          groupAnswers[specialKey] = []; 
         }
       });
     }

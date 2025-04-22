@@ -28,6 +28,7 @@ interface FrameworkData {
 interface GroupAnswerData {
   answer: string;
   frequency: number;
+  fullAnswer?: string; 
 }
 
 interface ParticipationData {
@@ -216,19 +217,47 @@ const filterEntriesByTimeRange = (entries: any[], start: number, end: number): a
         // Process group answers
         let groupAnswers: GroupAnswerData[] = [];
         if (commonAnalysis?.groupAnswers && questionActive) {
+          // First, extract full texts from special keys
+          const fullTextMap: Record<string, string> = {};
+          
+          Object.keys(commonAnalysis.groupAnswers).forEach(key => {
+            if (key.includes('|FULL_TEXT_MARKER|')) {
+              const [truncated, full] = key.split('|FULL_TEXT_MARKER|');
+              fullTextMap[truncated] = full;
+            }
+          });
+          
           groupAnswers = Object.entries(commonAnalysis.groupAnswers)
-            .map(([answer, entries]: [string, any]) => {
-              const filtered = filterEntriesByTimeRange(entries, startTimestamp, endTimestamp);
-              const latest = filtered.length > 0 ? filtered[filtered.length - 1] : { frequency: 0 };
-              
-              return { answer, frequency: latest.frequency || 0 };
-            })
-            .filter(item => item.frequency > 0);
+          .filter(([key]) => !key.includes('|FULL_TEXT_MARKER|')) // Skip special keys
+          .map(([answer, entries]: [string, any]) => {
+            const filtered = filterEntriesByTimeRange(entries, startTimestamp, endTimestamp);
+            const latest = filtered.length > 0 ? filtered[filtered.length - 1] : { frequency: 0 };
+            
+            // Get the full text from our map
+            const fullText = fullTextMap[answer];
+            
+            // Debug log to see what's happening
+            console.log(`Processing answer: "${answer}"`);
+            console.log(`Found full text: ${fullText ? `"${fullText}"` : 'NONE'}`);
+            
+            // Create extended data object with full text
+            return { 
+              answer, 
+              frequency: latest.frequency || 0,
+              fullAnswer: fullText || answer // Use full text if available
+            };
+          })
+          .filter(item => item.frequency > 0);
         }
-        
-        if (groupAnswers.length === 0) {
-          groupAnswers = [{ answer: 'No data available', frequency: 0 }];
-        }
+
+        console.log(`Q${index + 1} - UNTRUNCATED GROUP ANSWER KEYS:`);
+          if (commonAnalysis?.groupAnswers) {
+            // Log each answer key individually to avoid console truncation
+            Object.keys(commonAnalysis.groupAnswers).forEach((key, i) => {
+              console.log(`Raw Answer Option ${i+1} (${key.length} chars):`);
+              console.log(key);
+            });
+          }
         
         // Generate participation data based on real user activity
         const participation: ParticipationData[] = [];
@@ -331,9 +360,20 @@ const filterEntriesByTimeRange = (entries: any[], start: number, end: number): a
                         />
                         <Tooltip 
                           contentStyle={{ fontSize: 12 }}
-                          formatter={(value) => [`${value} groups`, 'Frequency']}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              console.log('Custom tooltip payload:', payload);
+                              return (
+                                <div className="bg-white p-2 border border-gray-200 shadow-md">
+                                  <p className="text-sm">{payload[0].payload.fullAnswer || payload[0].payload.answer}</p>
+                                  <p className="text-sm font-semibold">{`Frequency: ${payload[0].value} groups`}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                         />
-                        <Bar 
+                          <Bar 
                           dataKey="frequency" 
                           fill="#2563eb"
                           label={{ position: 'right', fontSize: 12 }}
